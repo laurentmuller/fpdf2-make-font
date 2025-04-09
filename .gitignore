@@ -2,4 +2,5 @@
 /vendor
 /vendor-bin/**/vendor/
 /vendor-bin/**/composer.lock
-/tests/targets/
+/tests/targets/*.php
+/tests/targets/*.z

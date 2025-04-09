@@ -15,28 +15,13 @@ namespace fpdf;
 
 /**
  * Class to parse a TTF font.
- *
- * @psalm-type GlyphType = array{
- *      name: string|int,
- *      w: int,
- *      lsb: int,
- *      length: int,
- *      offset: int,
- *      ssid: int,
- *      components? : array<int, int>}
- *
- * @psalm-type TableType = array{
- *      offset: int,
- *      length: int,
- *      data: string,
- *      checkSum: string}
  */
 class TTFParser
 {
     private const TAG_NAMES = [
-        'cmap', 'cvt ', 'fpgm', 'glyf', 'head',
-        'hhea', 'hmtx', 'loca', 'maxp', 'name',
-        'post', 'prep',
+        'cmap', 'cvt ', 'fpgm', 'glyf',
+        'head', 'hhea', 'hmtx', 'loca',
+        'maxp', 'name', 'post', 'prep',
     ];
 
     public bool $bold = false;
@@ -44,7 +29,14 @@ class TTFParser
     /** @psalm-var array<int, int>  */
     public array $chars = [];
     public bool $embeddable = false;
-    /** @psalm-var array<int, GlyphType> */
+    /** @psalm-var array<int, array{
+     * name: string|int,
+     * w: int,
+     * lsb: int,
+     * length: int,
+     * offset: int,
+     * ssid: int,
+     * components? : array<int, int>}> */
     public array $glyphs = [];
     public bool $isFixedPitch = false;
     public int $italicAngle = 0;
@@ -68,7 +60,11 @@ class TTFParser
     protected array $subsettedChars = [];
     /** @psalm-var array<int, int>  */
     protected array $subsettedGlyphs = [];
-    /** @psalm-var array<string, TableType> */
+    /** @psalm-var array<string, array{
+     * offset: int,
+     * length: int,
+     * data: string,
+     * checkSum: string}> */
     protected array $tables = [];
 
     /**

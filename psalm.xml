@@ -15,6 +15,7 @@
         <directory name="tests"/>
         <ignoreFiles>
             <directory name="tests/sources"/>
+            <directory name="tests/targets"/>
             <directory name="vendor"/>
         </ignoreFiles>
     </projectFiles>
