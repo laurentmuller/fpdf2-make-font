@@ -82,7 +82,7 @@ class TestMakeFont extends TestCase
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-return array<string, mixed>
      */
     private function load(string $file): array
     {
@@ -91,7 +91,7 @@ class TestMakeFont extends TestCase
         }
         include $file;
 
-        /** @psalm-var array<string, mixed> */
+        /** @phpstan-var array<string, mixed> */
         return \get_defined_vars();
     }
 }

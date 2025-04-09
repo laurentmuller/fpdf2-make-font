@@ -12,10 +12,8 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-require __DIR__ . '/TTFParser.php';
-
 /**
- * @psalm-type FontInfoType = array{
+ * @phpstan-type  FontInfoType = array{
  *     File: string,
  *     Data: string,
  *     OriginalSize: int,
@@ -36,9 +34,9 @@ require __DIR__ . '/TTFParser.php';
  *     CapHeight?: int,
  *     Weight?: string}
  *
- * @psalm-type MapType = array{uv: int, name: string}
+ * @phpstan-type MapType = array{uv: int, name: string}
  *
- * @psalm-type RangeType = array{0: int, 1: int, 2: int, 3: int}
+ * @phpstan-type RangeType = array{0: int, 1: int, 2: int, 3: int}
  */
 class MakeFont
 {
@@ -96,7 +94,7 @@ class MakeFont
     }
 
     /**
-     * @psalm-return FontInfoType
+     * @phpstan-return FontInfoType
      */
     private function createEmptyFont():array
     {
@@ -127,8 +125,8 @@ class MakeFont
     }
 
     /**
-     * @psalm-param array<int, MapType> $map
-     * @psalm-return FontInfoType
+     * @phpstan-param array<int, MapType> $map
+     * @phpstan-return FontInfoType
      */
     private function getInfoFromTrueType(string $fontFile, bool $embed, bool $subset, array $map): array
     {
@@ -193,8 +191,8 @@ class MakeFont
     }
 
     /**
-     * @psalm-param array<int, MapType> $map
-     * @psalm-return FontInfoType
+     * @phpstan-param array<int, MapType> $map
+     * @phpstan-return FontInfoType
      */
     private function getInfoFromType1(string $fontFile, bool $embed, array $map): array
     {
@@ -207,23 +205,23 @@ class MakeFont
             }
 
             // Read the first segment
-            /** @psalm-var array{marker: int, size: int} $lines */
+            /** @phpstan-var array{marker: int, size: int} $lines */
             $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
             if (128 !== $lines['marker']) {
                 \fclose($handle);
                 $this-> error('Font file is not a valid binary Type1');
             }
-            /** @psalm-var positive-int $size1 */
+            /** @phpstan-var positive-int $size1 */
             $size1 = $lines['size'];
             $data = (string) \fread($handle, $size1);
             // Read the second segment
-            /** @psalm-var array{marker: int, size: int} $lines */
+            /** @phpstan-var array{marker: int, size: int} $lines */
             $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
             if (128 !== $lines['marker']) {
                 \fclose($handle);
                 $this->error('Font file is not a valid binary Type1');
             }
-            /** @psalm-var positive-int $size2 */
+            /** @phpstan-var positive-int $size2 */
             $size2 = $lines['size'];
             $data .= (string) \fread($handle, $size2);
             \fclose($handle);
@@ -303,7 +301,7 @@ class MakeFont
     }
 
     /**
-     * @psalm-return array<int, MapType>
+     * @phpstan-return array<int, MapType>
      */
     private function loadMap(string $enc): array
     {
@@ -325,8 +323,8 @@ class MakeFont
     }
 
     /**
-     * @psalm-param array<int, MapType> $map
-     * @psalm-param FontInfoType $info
+     * @phpstan-param array<int, MapType> $map
+     * @phpstan-param FontInfoType $info
      */
     private function makeDefinitionFile(
         string $file,
@@ -370,7 +368,7 @@ class MakeFont
     }
 
     /**
-     * @psalm-param FontInfoType $info
+     * @phpstan-param FontInfoType $info
      */
     private function makeFontDescriptor(array $info): string
     {
@@ -411,7 +409,7 @@ class MakeFont
     }
 
     /**
-     * @psalm-param array<int, MapType> $map
+     * @phpstan-param array<int, MapType> $map
      */
     private function makeFontEncoding(array $map): string
     {
@@ -433,13 +431,13 @@ class MakeFont
     }
 
     /**
-     * @psalm-param array<int, MapType> $map
+     * @phpstan-param array<int, MapType> $map
      */
     private function makeUnicodeArray(array $map): string
     {
-        /** @psalm-var RangeType[] $ranges */
+        /** @phpstan-var RangeType[] $ranges */
         $ranges = [];
-        /** @psalm-var RangeType|null $range */
+        /** @phpstan-var RangeType|null $range */
         $range = null;
         foreach ($map as $c => $v) {
             $uv = $v['uv'];
@@ -484,7 +482,7 @@ class MakeFont
     }
 
     /**
-     * @psalm-param int[] $widths
+     * @phpstan-param int[] $widths
      */
     private function makeWidthArray(array $widths): string
     {

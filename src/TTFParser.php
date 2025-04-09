@@ -26,17 +26,18 @@ class TTFParser
 
     public bool $bold = false;
     public int $capHeight = 0;
-    /** @psalm-var array<int, int>  */
+    /** @phpstan-var array<int, int>  */
     public array $chars = [];
     public bool $embeddable = false;
-    /** @psalm-var array<int, array{
-     * name: string|int,
-     * w: int,
-     * lsb: int,
-     * length: int,
-     * offset: int,
-     * ssid: int,
-     * components? : array<int, int>}> */
+    /**
+     * @phpstan-var array<int, array{
+     *   name: string|int,
+     *   w: int,
+     *   lsb: int,
+     *   length: int,
+     *   offset: int,
+     *   ssid: int,
+     *   components? : array<int, int>}> */
     public array $glyphs = [];
     public bool $isFixedPitch = false;
     public int $italicAngle = 0;
@@ -50,22 +51,23 @@ class TTFParser
     public int $xMin = 0;
     public int $yMax = 0;
     public int $yMin = 0;
-    protected bool $glyphNames = false;
-    /** @psalm-var resource|closed-resource|false */
-    protected mixed $handle;
-    protected int $indexToLocFormat = 0;
-    protected int $numberOfHMetrics = 0;
-    protected int $numGlyphs = 0;
-    /** @psalm-var array<int, int>  */
-    protected array $subsettedChars = [];
-    /** @psalm-var array<int, int>  */
-    protected array $subsettedGlyphs = [];
-    /** @psalm-var array<string, array{
-     * offset: int,
-     * length: int,
-     * data: string,
-     * checkSum: string}> */
-    protected array $tables = [];
+    private bool $glyphNames = false;
+    /** @phpstan-var resource|closed-resource|false */
+    private mixed $handle;
+    private int $indexToLocFormat = 0;
+    private int $numberOfHMetrics = 0;
+    private int $numGlyphs = 0;
+    /** @phpstan-var array<int, int>  */
+    private array $subsettedChars = [];
+    /** @phpstan-var array<int, int>  */
+    private array $subsettedGlyphs = [];
+    /**
+     * @phpstan-var array<string, array{
+     *   offset: int,
+     *   length: int,
+     *   data: string,
+     *   checkSum: string}> */
+    private array $tables = [];
 
     /**
      * @throws \Exception
@@ -114,7 +116,7 @@ class TTFParser
     }
 
     /**
-     * @psalm-param array<int, int> $chars
+     * @phpstan-param array<int, int> $chars
      */
     public function subset(array $chars): void
     {
@@ -729,7 +731,7 @@ class TTFParser
 
     private function readShort(): int
     {
-        /** @psalm-var array{n: int} $a */
+        /** @phpstan-var array{n: int} $a */
         $a =  $this->unpack('nn', 2);
         $v = $a['n'];
         if ($v >= 0x8000) {
@@ -741,7 +743,7 @@ class TTFParser
 
     private function readULong(): int
     {
-        /** @psalm-var array{N: int} $a */
+        /** @phpstan-var array{N: int} $a */
         $a = $this->unpack('NN', 4);
 
         return $a['N'];
@@ -749,7 +751,7 @@ class TTFParser
 
     private function readUShort(): int
     {
-        /** @psalm-var array{n: int} $a */
+        /** @phpstan-var array{n: int} $a */
         $a =  $this->unpack('nn', 2);
 
         return $a['n'];
@@ -790,11 +792,11 @@ class TTFParser
     }
 
     /**
-     * @psalm-return array<string, int>
+     * @phpstan-return array<string, int>
      */
     private function unpack(string $format, int $len): array
     {
-        /** @psalm-var array<string, int> */
+        /** @phpstan-var array<string, int> */
         return (array) \unpack($format, $this->read($len));
     }
 }
