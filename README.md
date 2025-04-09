@@ -9,7 +9,7 @@ PLATHEY.
 **Function:**
 
 ```php
-make((string fontFile [, string enc [, boolean embed [, boolean subset]]])
+make(string fontFile [, string enc [, boolean embed [, boolean subset]]])
 ```
 
 **Parameters:**
@@ -56,8 +56,8 @@ encoding.
 
 The third parameter indicates whether the font should be embedded in the PDF or
 not. When a font is not embedded, it is searched in the system. The advantage
-is that the PDF file is smaller; on the other hand, if it is not available,
-then a substitution font is used. So you should ensure that the needed font is
+is that the PDF file is smaller; but if it is not available, then a
+substitution font is used. So you should ensure that the required font is
 installed on the client systems. Embedding is the recommended option to
 guarantee a correct rendering.
 
@@ -69,8 +69,8 @@ especially if the original font was big.
 After you have called the function (create a new file for this and include
 `make.php`), a `.php` file is created, with the same name as the font file. You
 may rename it if you wish. If the case of embedding, the font file is compressed
-and gives a second file with `.z` as extension (except if the compression
-function is not available, it requires Zlib). You may rename it too, but in
+and gives a second file with `.z` as extension except if the compression
+function is not available (it requires Zlib). You may rename it too, but in
 this case you have to change the variable `$file` in the `.php` file
 accordingly.
 
