@@ -1,0 +1,22 @@
+risky: true
+version: 8.2
+preset: symfony2023
+monolithic: true
+finder:
+    exclude:
+        - "docs"
+        - "vendor"
+        - "makefont"
+        - "src/font"
+        - "tests/fonts"
+    name: "*.php"
+    not-name:
+        - "FPDF.php"
+enabled:
+    - native_function_invocation
+    - concat_with_spaces
+disabled:
+    - no_nullable_type_declarations
+    - native_function_invocation_symfony
+    - concat_without_spaces
+    - phpdoc_to_comment

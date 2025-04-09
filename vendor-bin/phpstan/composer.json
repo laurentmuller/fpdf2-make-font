@@ -1,0 +1,20 @@
+{
+    "require": {
+        "php": "^8.2",
+        "phpstan/extension-installer": "^1.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "tomasvotruba/type-coverage": "^2.0"
+    },
+    "config": {
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    }
+}

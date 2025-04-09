@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+/.github                 export-ignore
+/cache                   export-ignore
+/doc                     export-ignore
+/makefont                export-ignore
+/tests                   export-ignore
+/vendor-bin              export-ignore
+/.gitattributes          export-ignore
+/.gitignore              export-ignore
+/.markdownlint-cli2.yaml export-ignore
+/.php-cs-fixer.dist.php  export-ignore
+/.styleci.yml            export-ignore
+/.symfony.insight.yaml   export-ignore
+/CHANGELOG.md            export-ignore
+/phpstan.neon            export-ignore
+/phpunit.xml.dist        export-ignore
+/psalm.xml               export-ignore
+/rector.php              export-ignore
+/README.md               export-ignore
+/composer.lock           export-ignore

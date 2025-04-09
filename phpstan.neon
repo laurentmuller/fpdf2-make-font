@@ -1,0 +1,17 @@
+parameters:
+    level: 10
+    tmpDir: cache/phpstan
+    paths:
+        - src
+        - tests
+
+    excludePaths:
+        - vendor
+
+    type_coverage:
+        param: 100
+        return: 100
+        property: 100
+
+    reportUnmatchedIgnoredErrors: true
+    checkUninitializedProperties: true
