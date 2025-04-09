@@ -1,5 +1,6 @@
 {
     "name": "laurentmuller/fpdf2-make-font",
+    "description": "FPDF2 make font is a PHP application to generate fonts.",
     "type": "library",
     "autoload": {
         "psr-4": {

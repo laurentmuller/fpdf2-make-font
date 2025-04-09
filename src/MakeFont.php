@@ -293,7 +293,7 @@ class MakeFont
             $info['Descender'] = $info['FontBBox'][1];
         }
         $info['Bold'] = isset($info['Weight']) && 1 === \preg_match('/bold|black/i', $info['Weight']);
-        $info['MissingWidth'] = isset($cw['.notdef']) ? $cw['.notdef'] : 0;
+        $info['MissingWidth'] = $cw['.notdef'] ?? 0;
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $c => $v) {
             if ('.notdef' !== $v['name']) {
