@@ -24,6 +24,7 @@ class TestMakeFont extends TestCase
     private string $sources;
     private string $targets;
 
+    #[\Override]
     protected function setUp(): void
     {
         $this->fonts = __DIR__ . '/fonts/';
@@ -68,9 +69,6 @@ class TestMakeFont extends TestCase
     {
         $sourceFile = $this->sources . $name . '.php';
         $targetFile = $this->targets . $name . '.php';
-        self::assertFileExists($sourceFile);
-        self::assertFileExists($targetFile);
-
         $source = $this->load($sourceFile);
         $target = $this->load($targetFile);
         self::assertArrayIsEqualToArrayIgnoringListOfKeys($source, $target, self::IGNORED_KEY);
@@ -88,8 +86,12 @@ class TestMakeFont extends TestCase
      */
     private function load(string $file): array
     {
+        if (!\file_exists($file)) {
+            self::fail('Unable to find file: ' . $file);
+        }
         include $file;
 
+        /** @psalm-var array<string, mixed> */
         return \get_defined_vars();
     }
 }

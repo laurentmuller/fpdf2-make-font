@@ -19,7 +19,7 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-require 'TTFParser.php';
+require __DIR__ . '/TTFParser.php';
 
 /**
  * @psalm-type FontInfoType = array{
@@ -293,11 +293,7 @@ class MakeFont
             $info['Descender'] = $info['FontBBox'][1];
         }
         $info['Bold'] = isset($info['Weight']) && 1 === \preg_match('/bold|black/i', $info['Weight']);
-        if (isset($cw['.notdef'])) {
-            $info['MissingWidth'] = $cw['.notdef'];
-        } else {
-            $info['MissingWidth'] = 0;
-        }
+        $info['MissingWidth'] = isset($cw['.notdef']) ? $cw['.notdef'] : 0;
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $c => $v) {
             if ('.notdef' !== $v['name']) {

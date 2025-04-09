@@ -59,7 +59,7 @@ class TTFParser
     public int $yMax = 0;
     public int $yMin = 0;
     protected bool $glyphNames = false;
-    /** @psalm-var resource|false */
+    /** @psalm-var resource|closed-resource|false */
     protected mixed $handle;
     protected int $indexToLocFormat = 0;
     protected int $numberOfHMetrics = 0;
@@ -157,7 +157,7 @@ class TTFParser
         \sort($chars);
         $segments = [];
         $segment = [$chars[0], $chars[0]];
-        for ($i = 1; $i < \count($chars); ++$i) {
+        for ($i = 1, $counter = \count($chars); $i < $counter; ++$i) {
             if ($chars[$i] > $segment[1] + 1) {
                 $segments[] = $segment;
                 $segment = [$chars[$i], $chars[$i]];
@@ -189,11 +189,7 @@ class TTFParser
                 }
             } else {
                 // Segment with a single char
-                if ($start < 0xFFFF) {
-                    $ssid = $this->glyphs[$this->chars[$start]]['ssid'];
-                } else {
-                    $ssid = 0;
-                }
+                $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
                 $idDelta[] = $ssid - $start;
                 $idRangeOffset[] = 0;
             }
@@ -201,7 +197,7 @@ class TTFParser
         $entrySelector = 0;
         $n = $segCount;
         while (1 !== $n) {
-            $n = $n >> 1;
+            $n >>= 1;
             ++$entrySelector;
         }
         $searchRange = (1 << $entrySelector) * 2;
@@ -251,7 +247,7 @@ class TTFParser
         $entrySelector = 0;
         $n = $numTables;
         while (1 !== $n) {
-            $n = $n >> 1;
+            $n >>= 1;
             ++$entrySelector;
         }
         $searchRange = 16 * (1 << $entrySelector);
@@ -396,15 +392,6 @@ class TTFParser
         throw new \RuntimeException($msg);
     }
 
-    /**
-     * @return resource
-     */
-    private function getHandle(): mixed
-    {
-        /** @psalm-var resource */
-        return $this->handle;
-    }
-
     private function isBitSet(int $value, int $mask):bool
     {
         return ($value & $mask) === $mask;
@@ -421,6 +408,9 @@ class TTFParser
         $this->tables[$tag]['data'] = $this->read($length);
     }
 
+    /**
+     * @psalm-suppress PossiblyInvalidArgument
+     */
     private function parseCmap(): void
     {
         $this->seekTag('cmap');
@@ -462,7 +452,8 @@ class TTFParser
         for ($i = 0; $i < $segCount; ++$i) {
             $idDelta[$i] = $this->readShort();
         }
-        $offset = (int) \ftell($this->getHandle());
+        // @phpstan-ignore argument.type
+        $offset = (int) \ftell($this->handle);
         for ($i = 0; $i < $segCount; ++$i) {
             $idRangeOffset[$i] = $this->readUShort();
         }
@@ -589,6 +580,9 @@ class TTFParser
         }
     }
 
+    /**
+     * @psalm-suppress InvalidPropertyAssignmentValue
+     */
     private function parseLoca(): void
     {
         $this->seekTag('loca');
@@ -720,11 +714,7 @@ class TTFParser
                 $names[] = $this->read($len);
             }
             foreach ($glyphNameIndex as $i => $index) {
-                if ($index >= 258) {
-                    $this->glyphs[$i]['name'] = $names[$index - 258];
-                } else {
-                    $this->glyphs[$i]['name'] = $index;
-                }
+                $this->glyphs[$i]['name'] = $index >= 258 ? $names[$index - 258] : $index;
             }
             $this->glyphNames = true;
         } else {
@@ -732,9 +722,13 @@ class TTFParser
         }
     }
 
+    /**
+     * @psalm-suppress PossiblyInvalidArgument
+     */
     private function read(int $n): string
     {
-        return $n > 0 ?  (string) \fread($this->getHandle(), $n) : '';
+        // @phpstan-ignore argument.type
+        return $n > 0 ?  (string) \fread($this->handle, $n) : '';
     }
 
     private function readShort(): int
@@ -765,9 +759,13 @@ class TTFParser
         return $a['n'];
     }
 
+    /**
+     * @psalm-suppress PossiblyInvalidArgument
+     */
     private function seekFile(int $offset, int $whence = \SEEK_SET): void
     {
-        \fseek($this->getHandle(), $offset, $whence);
+        // @phpstan-ignore argument.type
+        \fseek($this->handle, $offset, $whence);
     }
 
     private function seekTag(string $tag): void

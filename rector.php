@@ -25,9 +25,8 @@ return RectorConfig::configure()
         __DIR__ . '/rector.php',
     ])->withSkip([
         PreferPHPUnitThisCallRector::class,
-        __DIR__ . '/src/font',
-        __DIR__ . '/tests/FPDF.php',
-        __DIR__ . '/tests/font',
+        __DIR__ . '/tests/sources',
+        __DIR__ . '/tests/targets',
     ])->withSets([
         // global
         SetList::PHP_82,
