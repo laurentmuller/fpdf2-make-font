@@ -449,9 +449,9 @@ class TTFParser extends FileHandler
         if (4 !== $format) {
             throw MakeFontException::format('Unexpected sub-table format: %d.', $format);
         }
-        $this->skip(4); // length, language: 2 * 2
+        $this->skip(4); // length, language
         $segCount = $this->readUShort() / 2;
-        $this->skip(6); // searchRange, entrySelector, rangeShift: 3 * 2
+        $this->skip(6); // searchRange, entrySelector, rangeShift
         for ($i = 0; $i < $segCount; ++$i) {
             $endCount[$i] = $this->readUShort();
         }
@@ -508,7 +508,7 @@ class TTFParser extends FileHandler
                 $this->seek($tableOffset + $glyph['offset']);
                 if ($this->readShort() < 0) {
                     // Composite glyph
-                    $this->skip(8); // xMin, yMin, xMax, yMax: 4 * 2
+                    $this->skip(8); // xMin, yMin, xMax, yMax
                     $offset = 10; // 5 * 2
                     $components = [];
                     do {
@@ -516,16 +516,16 @@ class TTFParser extends FileHandler
                         $index = $this->readUShort();
                         $components[$offset + 2] = $index;
                         if ($this->isBitSet($flags, 1)) { // ARG_1_AND_2_ARE_WORDS
-                            $skip = 4; // 2 * 2;
+                            $skip = 4;
                         } else {
                             $skip = 2;
                         }
                         if ($this->isBitSet($flags, 8)) { // WE_HAVE_A_SCALE
                             $skip += 2;
                         } elseif ($this->isBitSet($flags, 64)) { // WE_HAVE_AN_X_AND_Y_SCALE
-                            $skip += 4; // 2 * 2
+                            $skip += 4;
                         } elseif ($this->isBitSet($flags, 128)) { // WE_HAVE_A_TWO_BY_TWO
-                            $skip += 8; // 4 * 2;
+                            $skip += 8;
                         }
                         $this->skip($skip);
                         $offset += 2 * 2 + $skip;
@@ -542,7 +542,7 @@ class TTFParser extends FileHandler
     private function parseHead(): void
     {
         $this->seekTag('head');
-        $this->skip(12); // version, fontRevision, checkSumAdjustment: 3 * 4
+        $this->skip(12); // version, fontRevision, checkSumAdjustment
         $magicNumber = $this->readULong();
         if (0x5F0F3CF5 !== $magicNumber) {
             throw MakeFontException::format('Incorrect magic number: 0x%X.', $magicNumber);
@@ -554,7 +554,7 @@ class TTFParser extends FileHandler
         $this->yMin = $this->readShort();
         $this->xMax = $this->readShort();
         $this->yMax = $this->readShort();
-        $this->skip(6); // macStyle, lowestRecPPEM, fontDirectionHint: 3 * 2
+        $this->skip(6); // macStyle, lowestRecPPEM, fontDirectionHint
         $this->indexToLocFormat = $this->readShort();
     }
 
@@ -564,7 +564,7 @@ class TTFParser extends FileHandler
     private function parseHhea(): void
     {
         $this->seekTag('hhea');
-        $this->skip(34); // 4 + 15 * 2
+        $this->skip(34);
         $this->numberOfHMetrics = $this->readUShort();
     }
 
@@ -649,17 +649,17 @@ class TTFParser extends FileHandler
         $count = $this->readUShort();
         $stringOffset = $this->readUShort();
         for ($i = 0; $i < $count; ++$i) {
-            $this->skip(6); // platformID, encodingID, languageID: 3 * 2
+            $this->skip(6); // platformID, encodingID, languageID
             $nameID = $this->readUShort();
             $length = $this->readUShort();
             $offset = $this->readUShort();
             if (6 === $nameID) {
                 // PostScript name
                 $this->seek($tableOffset + $stringOffset + $offset);
-                $str = $this->read($length);
-                $str = \str_replace(\chr(0), '', $str);
-                $str = (string) \preg_replace('|[ \[\](){}<>/%]|', '', $str);
-                $this->postScriptName = $str;
+                $name = $this->read($length);
+                $name = \str_replace(\chr(0), '', $name);
+                $name = (string) \preg_replace('|[ \[\](){}<>/%]|', '', $name);
+                $this->postScriptName = $name;
                 break;
             }
         }
@@ -678,7 +678,7 @@ class TTFParser extends FileHandler
             throw MakeFontException::format('Unrecognized file version: 0x%X.', $version);
         }
         $numTables = $this->readUShort();
-        $this->skip(6); // searchRange, entrySelector, rangeShift: 3 * 2
+        $this->skip(6); // searchRange, entrySelector, rangeShift
         $this->tables = [];
         for ($i = 0; $i < $numTables; ++$i) {
             $tag = $this->read(4);
@@ -701,17 +701,17 @@ class TTFParser extends FileHandler
     {
         $this->seekTag('OS/2');
         $version = $this->readUShort();
-        $this->skip(6); // xAvgCharWidth, usWeightClass, usWidthClass: 3 * 2
+        $this->skip(6); // xAvgCharWidth, usWeightClass, usWidthClass
         $fsType = $this->readUShort();
         $this->embeddable = (2 !== $fsType) && ($fsType & 0x200) === 0;
         $this->skip(52); // 11 * 2 + 10 + 4 * 4 + 4
         $fsSelection = $this->readUShort();
         $this->bold = ($fsSelection & 32) !== 0;
-        $this->skip(4); // usFirstCharIndex, usLastCharIndex: 2 * 2
+        $this->skip(4); // usFirstCharIndex, usLastCharIndex
         $this->typoAscender = $this->readShort();
         $this->typoDescender = $this->readShort();
         if ($version >= 2) {
-            $this->skip(16); // 3 * 2 + 2 * 4 + 2
+            $this->skip(16);
             $this->capHeight = $this->readShort();
         } else {
             $this->capHeight = 0;
@@ -737,7 +737,7 @@ class TTFParser extends FileHandler
 
         // Extract glyph names
         $this->glyphNames = true;
-        $this->skip(18); // min/max usage, numberOfGlyphs, numberOfGlyphs: 4 * 4 + 2
+        $this->skip(18); // min/max usage, numberOfGlyphs, numberOfGlyphs
 
         $names = [];
         $numNames = 0;
