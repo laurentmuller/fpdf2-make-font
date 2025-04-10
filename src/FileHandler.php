@@ -24,7 +24,7 @@ class FileHandler
     {
         $handle = \fopen($file, $mode);
         if (!\is_resource($handle)) {
-            throw new MakeFontException('Unable to open file: ' . $file);
+            throw MakeFontException::format('Unable to open file: %s.', $file);
         }
         $this->handle = $handle;
     }
@@ -39,15 +39,6 @@ class FileHandler
         if (\is_resource($this->handle)) {
             \fclose($this->handle);
         }
-    }
-
-    /**
-     * @return resource
-     */
-    public function getHandle(): mixed
-    {
-        /** @psalm-var resource */
-        return $this->handle;
     }
 
     public function read(int $length): string
@@ -70,8 +61,26 @@ class FileHandler
         return (int) \ftell($this->getHandle());
     }
 
+    /**
+     * @phpstan-return array<string, int>
+     */
+    public function unpack(string $format, int $length): array
+    {
+        /** @phpstan-var array<string, int> */
+        return (array) \unpack($format, $this->read($length));
+    }
+
     public function write(string $data): void
     {
         \fwrite($this->getHandle(), $data);
+    }
+
+    /**
+     * @return resource
+     */
+    protected function getHandle(): mixed
+    {
+        /** @psalm-var resource */
+        return $this->handle;
     }
 }

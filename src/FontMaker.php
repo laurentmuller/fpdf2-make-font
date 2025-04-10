@@ -44,14 +44,14 @@ class FontMaker
     public function makeFont(string $fontFile, string $enc = 'cp1252', bool $embed = true, bool $subset = true): void
     {
         if (!\file_exists($fontFile)) {
-            throw new MakeFontException('Font file not found: ' . $fontFile);
+            throw MakeFontException::format('Font file not found: %s.', $fontFile);
         }
         $ext = \strtolower(\substr($fontFile, -3));
 
         $type = match ($ext) {
             'ttf', 'otf' => 'TrueType',
             'pfb' => 'Type1',
-            default => throw new MakeFontException('Unrecognized font file extension: ' . $ext),
+            default => throw MakeFontException::format('Unrecognized font file extension: %s.', $ext),
         };
 
         $map = $this->loadMap($enc);
@@ -120,7 +120,7 @@ class FontMaker
         $info = $this->createEmptyFont();
         if ($embed) {
             if (!$parser->embeddable) {
-                throw new MakeFontException('Font license does not allow embedding');
+                throw MakeFontException::instance('Font license does not allow embedding.');
             }
             if ($subset) {
                 $chars = [];
@@ -136,32 +136,34 @@ class FontMaker
             }
             $info['OriginalSize'] = \strlen($info['Data']);
         }
-        $k = 1000 / $parser->unitsPerEm;
+        $factor = 1000 / $parser->unitsPerEm;
         $info['FontName'] = $parser->postScriptName;
         $info['Bold'] = $parser->bold;
         $info['ItalicAngle'] = $parser->italicAngle;
         $info['IsFixedPitch'] = $parser->isFixedPitch;
-        $info['Ascender'] = $this->round($k, $parser->typoAscender);
-        $info['Descender'] = $this->round($k, $parser->typoDescender);
-        $info['UnderlineThickness'] = $this->round($k, $parser->underlineThickness);
-        $info['UnderlinePosition'] = $this->round($k, $parser->underlinePosition);
+        $info['Ascender'] = $this->round($factor, $parser->typoAscender);
+        $info['Descender'] = $this->round($factor, $parser->typoDescender);
+        $info['UnderlineThickness'] = $this->round($factor, $parser->underlineThickness);
+        $info['UnderlinePosition'] = $this->round($factor, $parser->underlinePosition);
         $info['FontBBox'] = [
-            $this->round($k, $parser->xMin),
-            $this->round($k, $parser->yMin),
-            $this->round($k, $parser->xMax),
-            $this->round($k, $parser->yMax)];
-        $info['CapHeight'] = $this->round($k, $parser->capHeight);
-        $info['MissingWidth'] = $this->round($k, $parser->glyphs[0]['w']);
+            $this->round($factor, $parser->xMin),
+            $this->round($factor, $parser->yMin),
+            $this->round($factor, $parser->xMax),
+            $this->round($factor, $parser->yMax)];
+        $info['CapHeight'] = $this->round($factor, $parser->capHeight);
+        $info['MissingWidth'] = $this->round($factor, $parser->glyphs[0]['width']);
         $widths = \array_fill(0, 256, $info['MissingWidth']);
-        foreach ($map as $c => $v) {
-            if (self::NOT_DEF !== $v['name']) {
-                if (isset($parser->chars[$v['uv']])) {
-                    $id = $parser->chars[$v['uv']];
-                    $w = $parser->glyphs[$id]['w'];
-                    $widths[$c] = $this->round($k, $w);
-                } else {
-                    $this->warning('Character ' . $v['name'] . ' is missing');
-                }
+        foreach ($map as $index => $value) {
+            if (self::NOT_DEF === $value['name']) {
+                continue;
+            }
+            $uv = $value['uv'];
+            if (isset($parser->chars[$uv])) {
+                $id = $parser->chars[$uv];
+                $width = $parser->glyphs[$id]['width'];
+                $widths[$index] = $this->round($factor, $width);
+            } else {
+                $this->warning('Character ' . $value['name'] . ' is missing');
             }
         }
         $info['Widths'] = $widths;
@@ -185,7 +187,7 @@ class FontMaker
         $cw = $this->parseAfmFile($afmFile, $info);
 
         if (!isset($info['FontName'])) {
-            throw new MakeFontException('FontName missing in AFM file');
+            throw MakeFontException::instance('FontName missing in AFM file.');
         }
         if (!isset($info['Ascender'])) {
             $info['Ascender'] = $info['FontBBox'][3];
@@ -218,7 +220,7 @@ class FontMaker
         $file = \sprintf('%s/map/%s.map', __DIR__, \strtolower($enc));
         $lines = \file($file);
         if (false === $lines || [] === $lines) {
-            throw new MakeFontException('Encoding not found: ' . $enc);
+            throw MakeFontException::format('Encoding not found: %s.', $enc);
         }
         $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
@@ -430,11 +432,11 @@ class FontMaker
     private function parseAfmFile(string $afmFile, array &$info): array
     {
         if (!\file_exists($afmFile)) {
-            throw new MakeFontException('AFM font file not found: ' . $afmFile);
+            throw MakeFontException::format('AFM font file not found: %s.', $afmFile);
         }
         $lines = \file($afmFile, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
         if (false === $lines || [] === $lines) {
-            throw new MakeFontException('AFM font file empty or not readable: ' . $afmFile);
+            throw MakeFontException::format('AFM font file empty or not readable: %s.', $afmFile);
         }
 
         $cw = [];
@@ -478,13 +480,13 @@ class FontMaker
      */
     private function readSegment(FileHandler $handler): int
     {
-        /** @phpstan-var array{marker: int, size: positive-int} $lines */
-        $lines = \unpack('Cmarker/Ctype/Vsize', $handler->read(6));
-        if (128 !== $lines['marker']) {
-            throw new MakeFontException('Font file is not a valid binary Type1');
+        /** @phpstan-var array{marker: int, type: int, size: positive-int} $values */
+        $values = $handler->unpack('Cmarker/Ctype/Vsize', 6);
+        if (128 !== $values['marker']) {
+            throw MakeFontException::instance('Font file is not a valid binary Type1.');
         }
 
-        return $lines['size'];
+        return $values['size'];
     }
 
     private function round(float $factor, float $value): int

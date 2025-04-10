@@ -15,4 +15,13 @@ namespace fpdf;
 
 class MakeFontException extends \RuntimeException
 {
+    public static function format(string $format, string|int ...$values): self
+    {
+        return self::instance(\sprintf($format, ...$values));
+    }
+
+    public static function instance(string $message): self
+    {
+        return new self($message);
+    }
 }

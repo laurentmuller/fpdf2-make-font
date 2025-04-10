@@ -72,7 +72,7 @@ class FontMakerTest extends TestCase
     {
         $fontFile = __FILE__;
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessage('Unrecognized font file extension: php');
+        self::expectExceptionMessage('Unrecognized font file extension: php.');
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
@@ -81,7 +81,25 @@ class FontMakerTest extends TestCase
     {
         $fontFile = 'fake.txt';
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessage('Font file not found: fake.txt');
+        self::expectExceptionMessage('Font file not found: fake.txt.');
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
+    public function testInvalidOttoFont(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('OpenType font based on PostScript outlines is not supported.');
+        $fontFile = $this->fonts . 'otto_header.ttf';
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
+    public function testInvalidVersion(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Unrecognized file version: 0xABCDEFFF.');
+        $fontFile = $this->fonts . 'invalid_version.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
@@ -122,7 +140,7 @@ class FontMakerTest extends TestCase
     private function load(string $file): array
     {
         if (!\file_exists($file)) {
-            self::fail('Font file not found: ' . $file);
+            self::fail('File not found: ' . $file);
         }
         include $file;
 
