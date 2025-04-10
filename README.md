@@ -9,7 +9,7 @@ PLATHEY.
 **Function:**
 
 ```php
-make(string fontFile [, string enc [, boolean embed [, boolean subset]]])
+makeFont(string fontFile [, string enc [, boolean embed [, boolean subset]]])
 ```
 
 **Parameters:**
@@ -77,9 +77,9 @@ accordingly.
 **Example:**
 
 ```php
-require('src/make.php');
+require('src/makeFont.php');
 
-make('C:\\Windows\\Fonts\\comic.ttf','cp1252');
+makeFont('C:\\Windows\\Fonts\\comic.ttf','cp1252');
 ```
 
 Which gives the files `comic.php` and `comic.z`.
@@ -87,10 +87,10 @@ Which gives the files `comic.php` and `comic.z`.
 Then copy the generated files to the font directory. If the font file could
 not be compressed, copy it directly instead of the `.z` version.
 
-Another way to call `make()` is through the command line:
+Another way to call `makeFont()` is through the command line:
 
 ```console
-php src\make.php C:\Windows\Fonts\comic.ttf cp1252
+php src\makeFont.php C:\Windows\Fonts\comic.ttf cp1252
 ```
 
 **Declaration of the font in the script:**
@@ -117,9 +117,9 @@ Now let's see a complete example. We will use the
 step is the generation of the font files:
 
 ```php
-require('src/make.php');
+require('src/makeFont.php');
 
-make('CevicheOne-Regular.ttf', 'cp1252');
+makeFont('CevicheOne-Regular.ttf', 'cp1252');
 ```
 
 The script produces the following output:
@@ -130,7 +130,7 @@ The script produces the following output:
 Alternatively, we could have used the command line:
 
 ```console
-php src\make.php CevicheOne-Regular.ttf cp1252
+php src\makeFont.php CevicheOne-Regular.ttf cp1252
 ```
 
 We can now copy the two generated files to the font directory and write

@@ -13,10 +13,10 @@ declare(strict_types=1);
 
 namespace fpdf\Tests;
 
-use fpdf\MakeFont;
+use fpdf\FontMaker;
 use PHPUnit\Framework\TestCase;
 
-class TestMakeFont extends TestCase
+class TestFontMaker extends TestCase
 {
     private const IGNORED_KEY = ['file', 'originalsize'];
 
@@ -77,8 +77,8 @@ class TestMakeFont extends TestCase
     private function generateFont(string $name, bool $embed = true): void
     {
         $fontFile = $this->fonts . $name . '.ttf';
-        $makeFont = new MakeFont();
-        $makeFont->makeFont(fontFile: $fontFile, embed: $embed);
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont(fontFile: $fontFile, embed: $embed);
     }
 
     /**
@@ -87,7 +87,7 @@ class TestMakeFont extends TestCase
     private function load(string $file): array
     {
         if (!\file_exists($file)) {
-            self::fail('Unable to find file: ' . $file);
+            self::fail('Font file not found: ' . $file);
         }
         include $file;
 

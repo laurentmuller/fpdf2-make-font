@@ -52,7 +52,7 @@ class TTFParser
     public int $yMax = 0;
     public int $yMin = 0;
     private bool $glyphNames = false;
-    /** @phpstan-var resource|closed-resource|false */
+    /** @phpstan-var resource|closed-resource */
     private mixed $handle;
     private int $indexToLocFormat = 0;
     private int $numberOfHMetrics = 0;
@@ -69,15 +69,13 @@ class TTFParser
      *   checkSum: string}> */
     private array $tables = [];
 
-    /**
-     * @throws \Exception
-     */
     public function __construct(string $file)
     {
-        $this->handle =\fopen($file, 'r');
-        if (!\is_resource($this->handle)) {
+        $handle = \fopen($file, 'r');
+        if (!\is_resource($handle)) {
             $this->error('Unable to open file: ' . $file);
         }
+        $this->handle = $handle;
     }
 
     public function __destruct()
@@ -151,6 +149,93 @@ class TTFParser
         }
 
         // Divide charset in contiguous segments
+        $segments = $this->buildCmapSegments();
+        [$startCount, $endCount, $idDelta, $idRangeOffset, $glyphIdArray] = $this->buildCmapFormat($segments);
+        $segCount = \count($segments);
+
+        $entrySelector = 0;
+        $n = $segCount;
+        while (1 !== $n) {
+            $n >>= 1;
+            ++$entrySelector;
+        }
+        $searchRange = (1 << $entrySelector) * 2;
+        $rangeShift = 2 * $segCount - $searchRange;
+        $cmap = \pack('nnnn', 2 * $segCount, $searchRange, $entrySelector, $rangeShift);
+        foreach ($endCount as $value) {
+            $cmap .= \pack('n', $value);
+        }
+        $cmap .= \pack('n', 0); // reservedPad
+        foreach ($startCount as $value) {
+            $cmap .= \pack('n', $value);
+        }
+        foreach ($idDelta as $value) {
+            $cmap .= \pack('n', $value);
+        }
+        foreach ($idRangeOffset as $value) {
+            $cmap .= \pack('n', $value);
+        }
+        $cmap .= $glyphIdArray;
+
+        $data = \pack('nn', 0, 1); // version, numTables
+        $data .= \pack('nnN', 3, 1, 12); // platformID, encodingID, offset
+        $data .= \pack('nnn', 4, 6 + \strlen($cmap), 0); // format, length, language
+        $data .= $cmap;
+        $this->setTable('cmap', $data);
+    }
+
+    /**
+     * @phpstan-param array<int, int[]> $segments
+     *
+     * @phpstan-return array{
+     *     0: int[],
+     *     1: int[],
+     *     2: int[],
+     *     3: int[],
+     *     4: string}
+     */
+    private function buildCmapFormat(array $segments): array
+    {
+        $startCount = [];
+        $endCount = [];
+        $idDelta = [];
+        $idRangeOffset = [];
+        $glyphIdArray = '';
+        $count = \count($segments);
+        for ($i = 0; $i < $count; ++$i) {
+            [$start, $end] = $segments[$i];
+            $startCount[] = $start;
+            $endCount[] = $end;
+            if ($start !== $end) {
+                // Segment with multiple chars
+                $idDelta[] = 0;
+                $idRangeOffset[] = \strlen($glyphIdArray) + ($count - $i) * 2;
+                for ($c = $start; $c <= $end; ++$c) {
+                    $ssid = $this->glyphs[$this->chars[$c]]['ssid'];
+                    $glyphIdArray .= \pack('n', $ssid);
+                }
+            } else {
+                // Segment with a single char
+                $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
+                $idDelta[] = $ssid - $start;
+                $idRangeOffset[] = 0;
+            }
+        }
+
+        return [
+            $startCount,
+            $endCount,
+            $idDelta,
+            $idRangeOffset,
+            $glyphIdArray,
+        ];
+    }
+
+    /**
+     * @phpstan-return array<int, int[]>
+     */
+    private function buildCmapSegments(): array
+    {
         $chars = $this->subsettedChars;
         \sort($chars);
         $segments = [];
@@ -165,62 +250,8 @@ class TTFParser
         }
         $segments[] = $segment;
         $segments[] = [0xFFFF, 0xFFFF];
-        $segCount = \count($segments);
 
-        // Build a Format 4 sub-table
-        $startCount = [];
-        $endCount = [];
-        $idDelta = [];
-        $idRangeOffset = [];
-        $glyphIdArray = '';
-        for ($i = 0; $i < $segCount; ++$i) {
-            [$start, $end] = $segments[$i];
-            $startCount[] = $start;
-            $endCount[] = $end;
-            if ($start !== $end) {
-                // Segment with multiple chars
-                $idDelta[] = 0;
-                $idRangeOffset[] = \strlen($glyphIdArray) + ($segCount - $i) * 2;
-                for ($c = $start; $c <= $end; ++$c) {
-                    $ssid = $this->glyphs[$this->chars[$c]]['ssid'];
-                    $glyphIdArray .= \pack('n', $ssid);
-                }
-            } else {
-                // Segment with a single char
-                $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
-                $idDelta[] = $ssid - $start;
-                $idRangeOffset[] = 0;
-            }
-        }
-        $entrySelector = 0;
-        $n = $segCount;
-        while (1 !== $n) {
-            $n >>= 1;
-            ++$entrySelector;
-        }
-        $searchRange = (1 << $entrySelector) * 2;
-        $rangeShift = 2 * $segCount - $searchRange;
-        $cmap = \pack('nnnn', 2 * $segCount, $searchRange, $entrySelector, $rangeShift);
-        foreach ($endCount as $val) {
-            $cmap .= \pack('n', $val);
-        }
-        $cmap .= \pack('n', 0); // reservedPad
-        foreach ($startCount as $val) {
-            $cmap .= \pack('n', $val);
-        }
-        foreach ($idDelta as $val) {
-            $cmap .= \pack('n', $val);
-        }
-        foreach ($idRangeOffset as $val) {
-            $cmap .= \pack('n', $val);
-        }
-        $cmap .= $glyphIdArray;
-
-        $data = \pack('nn', 0, 1); // version, numTables
-        $data .= \pack('nnN', 3, 1, 12); // platformID, encodingID, offset
-        $data .= \pack('nnn', 4, 6 + \strlen($cmap), 0); // format, length, language
-        $data .= $cmap;
-        $this->setTable('cmap', $data);
+        return $segments;
     }
 
     private function buildFont(): string
@@ -372,14 +403,14 @@ class TTFParser
         $this->setTable('post', $data);
     }
 
-    private function checkSum(string $s): string
+    private function checkSum(string $str): string
     {
-        $n = \strlen($s);
         $high = 0;
         $low = 0;
-        for ($i = 0; $i < $n; $i += 4) {
-            $high += (\ord($s[$i]) << 8) + \ord($s[$i + 1]);
-            $low += (\ord($s[$i + 2]) << 8) + \ord($s[$i + 3]);
+        $length = \strlen($str);
+        for ($i = 0; $i < $length; $i += 4) {
+            $high += (\ord($str[$i]) << 8) + \ord($str[$i + 1]);
+            $low += (\ord($str[$i + 2]) << 8) + \ord($str[$i + 3]);
         }
 
         return \pack('nn', $high + ($low >> 16), $low);
@@ -390,7 +421,7 @@ class TTFParser
         throw new \RuntimeException($msg);
     }
 
-    private function isBitSet(int $value, int $mask):bool
+    private function isBitSet(int $value, int $mask): bool
     {
         return ($value & $mask) === $mask;
     }
@@ -399,9 +430,9 @@ class TTFParser
     {
         $this->seekTag($tag);
         $length = $this->tables[$tag]['length'];
-        $n = $length % 4;
-        if ($n > 0) {
-            $length += 4 - $n;
+        $padding = $length % 4;
+        if ($padding > 0) {
+            $length += 4 - $padding;
         }
         $this->tables[$tag]['data'] = $this->read($length);
     }
@@ -450,7 +481,6 @@ class TTFParser
         for ($i = 0; $i < $segCount; ++$i) {
             $idDelta[$i] = $this->readShort();
         }
-        // @phpstan-ignore argument.type
         $offset = (int) \ftell($this->handle);
         for ($i = 0; $i < $segCount; ++$i) {
             $idRangeOffset[$i] = $this->readUShort();
@@ -462,7 +492,7 @@ class TTFParser
             $d = $idDelta[$i];
             $ro = $idRangeOffset[$i];
             if ($ro > 0) {
-                $this->seekFile( $offset + 2 * $i + $ro);
+                $this->seekFile($offset + 2 * $i + $ro);
             }
             for ($c = $c1; $c <= $c2; ++$c) {
                 if (0xFFFF === $c) {
@@ -491,16 +521,16 @@ class TTFParser
         $tableOffset = $this->tables['glyf']['offset'];
         foreach ($this->glyphs as &$glyph) {
             if ($glyph['length'] > 0) {
-                $this->seekFile( $tableOffset + $glyph['offset']);
+                $this->seekFile($tableOffset + $glyph['offset']);
                 if ($this->readShort() < 0) {
                     // Composite glyph
                     $this->skip(4 * 2); // xMin, yMin, xMax, yMax
                     $offset = 5 * 2;
-                    $a = [];
+                    $components = [];
                     do {
                         $flags = $this->readUShort();
                         $index = $this->readUShort();
-                        $a[$offset + 2] = $index;
+                        $components[$offset + 2] = $index;
                         if ($this->isBitSet($flags, 1)) { // ARG_1_AND_2_ARE_WORDS
                             $skip = 2 * 2;
                         } else {
@@ -516,7 +546,7 @@ class TTFParser
                         $this->skip($skip);
                         $offset += 2 * 2 + $skip;
                     } while ($flags & 32); // MORE COMPONENTS
-                    $glyph['components'] = $a;
+                    $glyph['components'] = $components;
                 }
             }
         }
@@ -624,11 +654,11 @@ class TTFParser
             $offset = $this->readUShort();
             if (6 === $nameID) {
                 // PostScript name
-                $this->seekFile( $tableOffset + $stringOffset + $offset);
-                $s = $this->read($length);
-                $s = \str_replace(\chr(0), '', $s);
-                $s = \preg_replace('|[ \[\](){}<>/%]|', '', $s);
-                $this->postScriptName = (string) $s;
+                $this->seekFile($tableOffset + $stringOffset + $offset);
+                $str = $this->read($length);
+                $str = \str_replace(\chr(0), '', $str);
+                $str = (string) \preg_replace('|[ \[\](){}<>/%]|', '', $str);
+                $this->postScriptName = $str;
                 break;
             }
         }
@@ -693,46 +723,47 @@ class TTFParser
         $this->underlinePosition = $this->readShort();
         $this->underlineThickness = $this->readShort();
         $this->isFixedPitch = (0 !== $this->readULong());
-        if (0x20000 === $version) {
-            // Extract glyph names
-            $this->skip(4 * 4); // min/max usage
-            $this->skip(2); // numberOfGlyphs
-            $glyphNameIndex = [];
-            $names = [];
-            $numNames = 0;
-            for ($i = 0; $i < $this->numGlyphs; ++$i) {
-                $index = $this->readUShort();
-                $glyphNameIndex[] = $index;
-                if ($index >= 258 && $index - 257 > $numNames) {
-                    $numNames = $index - 257;
-                }
+        $this->glyphNames = false;
+        if (0x20000 !== $version) {
+            return;
+        }
+
+        // Extract glyph names
+        $this->glyphNames = true;
+        $this->skip(4 * 4); // min/max usage
+        $this->skip(2); // numberOfGlyphs
+
+        $names = [];
+        $numNames = 0;
+        $glyphNameIndex = [];
+        for ($i = 0; $i < $this->numGlyphs; ++$i) {
+            $index = $this->readUShort();
+            $glyphNameIndex[] = $index;
+            if ($index >= 258 && $index - 257 > $numNames) {
+                $numNames = $index - 257;
             }
-            for ($i = 0; $i < $numNames; ++$i) {
-                $len = \ord($this->read(1));
-                $names[] = $this->read($len);
-            }
-            foreach ($glyphNameIndex as $i => $index) {
-                $this->glyphs[$i]['name'] = $index >= 258 ? $names[$index - 258] : $index;
-            }
-            $this->glyphNames = true;
-        } else {
-            $this->glyphNames = false;
+        }
+        for ($i = 0; $i < $numNames; ++$i) {
+            $len = \ord($this->read(1));
+            $names[] = $this->read($len);
+        }
+        foreach ($glyphNameIndex as $i => $index) {
+            $this->glyphs[$i]['name'] = $index >= 258 ? $names[$index - 258] : $index;
         }
     }
 
     /**
      * @psalm-suppress PossiblyInvalidArgument
      */
-    private function read(int $n): string
+    private function read(int $length): string
     {
-        // @phpstan-ignore argument.type
-        return $n > 0 ?  (string) \fread($this->handle, $n) : '';
+        return $length > 0 ? (string) \fread($this->handle, $length) : '';
     }
 
     private function readShort(): int
     {
         /** @phpstan-var array{n: int} $a */
-        $a =  $this->unpack('nn', 2);
+        $a = $this->unpack('nn', 2);
         $v = $a['n'];
         if ($v >= 0x8000) {
             $v -= 65536;
@@ -752,7 +783,7 @@ class TTFParser
     private function readUShort(): int
     {
         /** @phpstan-var array{n: int} $a */
-        $a =  $this->unpack('nn', 2);
+        $a = $this->unpack('nn', 2);
 
         return $a['n'];
     }
@@ -762,7 +793,6 @@ class TTFParser
      */
     private function seekFile(int $offset, int $whence = \SEEK_SET): void
     {
-        // @phpstan-ignore argument.type
         \fseek($this->handle, $offset, $whence);
     }
 
@@ -777,9 +807,9 @@ class TTFParser
     private function setTable(string $tag, string $data): void
     {
         $length = \strlen($data);
-        $n = $length % 4;
-        if ($n > 0) {
-            $data = \str_pad($data, $length + 4 - $n, "\x00");
+        $padding = $length % 4;
+        if ($padding > 0) {
+            $data = \str_pad($data, $length + 4 - $padding, "\x00");
         }
         $this->tables[$tag]['data'] = $data;
         $this->tables[$tag]['length'] = $length;
@@ -794,9 +824,9 @@ class TTFParser
     /**
      * @phpstan-return array<string, int>
      */
-    private function unpack(string $format, int $len): array
+    private function unpack(string $format, int $length): array
     {
         /** @phpstan-var array<string, int> */
-        return (array) \unpack($format, $this->read($len));
+        return (array) \unpack($format, $this->read($length));
     }
 }

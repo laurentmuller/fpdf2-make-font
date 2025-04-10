@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of the 'fpdf2-make-font' package.
  *
@@ -33,24 +34,17 @@ namespace fpdf;
  *     StdVW?: int,
  *     CapHeight?: int,
  *     Weight?: string}
- *
  * @phpstan-type MapType = array{uv: int, name: string}
- *
  * @phpstan-type RangeType = array{0: int, 1: int, 2: int, 3: int}
  */
-class MakeFont
+class FontMaker
 {
+    private const NOT_DEF = '.notdef';
 
-    public function makeFont(
-        string $fontFile,
-        string $enc = 'cp1252',
-        bool   $embed = true,
-        bool   $subset = true
-    ): void
+    public function makeFont(string $fontFile, string $enc = 'cp1252', bool $embed = true, bool $subset = true): void
     {
-        // Generate a font definition file
         if (!\file_exists($fontFile)) {
-            $this-> error('Font file not found: ' . $fontFile);
+            $this->error('Font file not found: ' . $fontFile);
         }
         $ext = \strtolower(\substr($fontFile, -3));
 
@@ -64,15 +58,15 @@ class MakeFont
                 $type = 'Type1';
                 break;
             default:
-                $this-> error('Unrecognized font file extension: ' . $ext);
+                $this->error('Unrecognized font file extension: ' . $ext);
         }
 
         $map = $this->loadMap($enc);
 
         if ('TrueType' === $type) {
-            $info =$this-> getInfoFromTrueType($fontFile, $embed, $subset, $map);
+            $info = $this->getInfoFromTrueType($fontFile, $embed, $subset, $map);
         } else {
-            $info =$this-> getInfoFromType1($fontFile, $embed, $map);
+            $info = $this->getInfoFromType1($fontFile, $embed, $map);
         }
 
         $basename = \substr(\basename($fontFile), 0, -4);
@@ -96,7 +90,7 @@ class MakeFont
     /**
      * @phpstan-return FontInfoType
      */
-    private function createEmptyFont():array
+    private function createEmptyFont(): array
     {
         return [
             'File' => '',
@@ -115,7 +109,6 @@ class MakeFont
             'Size2' => 0,
             'Widths' => [],
         ];
-
     }
 
     private function error(string $message): never
@@ -126,6 +119,7 @@ class MakeFont
 
     /**
      * @phpstan-param array<int, MapType> $map
+     *
      * @phpstan-return FontInfoType
      */
     private function getInfoFromTrueType(string $fontFile, bool $embed, bool $subset, array $map): array
@@ -146,14 +140,14 @@ class MakeFont
             if ($subset) {
                 $chars = [];
                 foreach ($map as $v) {
-                    if ('.notdef' !== $v['name']) {
+                    if (self::NOT_DEF !== $v['name']) {
                         $chars[] = $v['uv'];
                     }
                 }
                 $ttf->subset($chars);
                 $info['Data'] = $ttf->build();
             } else {
-                $info['Data'] = (string)\file_get_contents($fontFile);
+                $info['Data'] = (string) \file_get_contents($fontFile);
             }
             $info['OriginalSize'] = \strlen($info['Data']);
         }
@@ -175,7 +169,7 @@ class MakeFont
         $info['MissingWidth'] = $this->round($k, $ttf->glyphs[0]['w']);
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $c => $v) {
-            if ('.notdef' !== $v['name']) {
+            if (self::NOT_DEF !== $v['name']) {
                 if (isset($ttf->chars[$v['uv']])) {
                     $id = $ttf->chars[$v['uv']];
                     $w = $ttf->glyphs[$id]['w'];
@@ -192,87 +186,18 @@ class MakeFont
 
     /**
      * @phpstan-param array<int, MapType> $map
+     *
      * @phpstan-return FontInfoType
      */
     private function getInfoFromType1(string $fontFile, bool $embed, array $map): array
     {
-        $cw = [];
         $info = $this->createEmptyFont();
         if ($embed) {
-            $handle = \fopen($fontFile, 'r');
-            if (!\is_resource($handle)) {
-                $this->error('Unable to open file: ' . $fontFile);
-            }
-
-            // Read the first segment
-            /** @phpstan-var array{marker: int, size: int} $lines */
-            $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
-            if (128 !== $lines['marker']) {
-                \fclose($handle);
-                $this-> error('Font file is not a valid binary Type1');
-            }
-            /** @phpstan-var positive-int $size1 */
-            $size1 = $lines['size'];
-            $data = (string) \fread($handle, $size1);
-            // Read the second segment
-            /** @phpstan-var array{marker: int, size: int} $lines */
-            $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
-            if (128 !== $lines['marker']) {
-                \fclose($handle);
-                $this->error('Font file is not a valid binary Type1');
-            }
-            /** @phpstan-var positive-int $size2 */
-            $size2 = $lines['size'];
-            $data .= (string) \fread($handle, $size2);
-            \fclose($handle);
-
-            $info['Data'] = $data;
-            $info['Size1'] = $size1;
-            $info['Size2'] = $size2;
+            $this->updateSegments($fontFile, $info);
         }
 
-        $afm = \substr($fontFile, 0, -3) . 'afm';
-        if (!\file_exists($afm)) {
-            $this->error('AFM font file not found: ' . $afm);
-        }
-        $lines = \file($afm);
-        if (false === $lines || [] === $lines) {
-            $this->error('AFM file empty or not readable');
-        }
-        foreach ($lines as $line) {
-            $e = \explode(' ', \rtrim($line));
-            if (\count($e) < 2) {
-                continue;
-            }
-            $entry = $e[0];
-            if ('C' === $entry) {
-                $w = (int) $e[4];
-                $name = $e[7];
-                $cw[$name] = $w;
-            } elseif ('FontName' === $entry) {
-                $info['FontName'] = $e[1];
-            } elseif ('Weight' === $entry) {
-                $info['Weight'] = $e[1];
-            } elseif ('ItalicAngle' === $entry) {
-                $info['ItalicAngle'] = (int)$e[1];
-            } elseif ('Ascender' === $entry) {
-                $info['Ascender'] = (int)$e[1];
-            } elseif ('Descender' === $entry) {
-                $info['Descender'] = (int)$e[1];
-            } elseif ('UnderlineThickness' === $entry) {
-                $info['UnderlineThickness'] = (int)$e[1];
-            } elseif ('UnderlinePosition' === $entry) {
-                $info['UnderlinePosition'] = (int)$e[1];
-            } elseif ('IsFixedPitch' === $entry) {
-                $info['IsFixedPitch'] = ('true' === $e[1]);
-            } elseif ('FontBBox' === $entry) {
-                $info['FontBBox'] = [(int)$e[1], (int)$e[2], (int)$e[3], (int)$e[4]];
-            } elseif ('CapHeight' === $entry) {
-                $info['CapHeight'] = (int)$e[1];
-            } elseif ('StdVW' === $entry) {
-                $info['StdVW'] = (int)$e[1];
-            }
-        }
+        $afmFile = \substr($fontFile, 0, -3) . 'afm';
+        $cw = $this->parseAfmFile($afmFile, $info);
 
         if (!isset($info['FontName'])) {
             $this->error('FontName missing in AFM file');
@@ -284,14 +209,14 @@ class MakeFont
             $info['Descender'] = $info['FontBBox'][1];
         }
         $info['Bold'] = isset($info['Weight']) && 1 === \preg_match('/bold|black/i', $info['Weight']);
-        $info['MissingWidth'] = $cw['.notdef'] ?? 0;
+        $info['MissingWidth'] = $cw[self::NOT_DEF] ?? 0;
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $c => $v) {
-            if ('.notdef' !== $v['name']) {
+            if (self::NOT_DEF !== $v['name']) {
                 if (isset($cw[$v['name']])) {
                     $widths[$c] = $cw[$v['name']];
                 } else {
-                    $this-> warning('Character ' . $v['name'] . ' is missing');
+                    $this->warning('Character ' . $v['name'] . ' is missing');
                 }
             }
         }
@@ -310,11 +235,11 @@ class MakeFont
         if (false === $lines || [] === $lines) {
             $this->error('Encoding not found: ' . $enc);
         }
-        $map = \array_fill(0, 256, ['uv' => -1, 'name' => '.notdef']);
+        $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
             $e = \explode(' ', \rtrim($line));
-            $c = (int)\hexdec(\substr($e[0], 1));
-            $uv = (int)\hexdec(\substr($e[1], 2));
+            $c = (int) \hexdec(\substr($e[0], 1));
+            $uv = (int) \hexdec(\substr($e[1], 2));
             $name = $e[2];
             $map[$c] = ['uv' => $uv, 'name' => $name];
         }
@@ -330,41 +255,40 @@ class MakeFont
         string $file,
         string $type,
         string $enc,
-        bool   $embed,
-        bool   $subset,
-        array  $map,
-        array  $info
-    ): void
-    {
-        $s = "<?php\n";
-        $s .= '$type = \'' . $type . "';\n";
-        $s .= '$name = \'' . ($info['FontName'] ?? '') . "';\n";
-        $s .= '$enc = \'' . $enc . "';\n";
-        $s .= '$up = ' . $info['UnderlinePosition'] . ";\n";
-        $s .= '$ut = ' . $info['UnderlineThickness'] . ";\n";
+        bool $embed,
+        bool $subset,
+        array $map,
+        array $info
+    ): void {
+        $output = "<?php\n";
+        $output .= '$type = \'' . $type . "';\n";
+        $output .= '$name = \'' . ($info['FontName'] ?? '') . "';\n";
+        $output .= '$enc = \'' . $enc . "';\n";
+        $output .= '$up = ' . $info['UnderlinePosition'] . ";\n";
+        $output .= '$ut = ' . $info['UnderlineThickness'] . ";\n";
 
         if ($embed) {
-            $s .= '$file = \'' . $info['File'] . "';\n";
+            $output .= '$file = \'' . $info['File'] . "';\n";
             if ('Type1' === $type) {
-                $s .= '$size1 = ' . $info['Size1'] . ";\n";
-                $s .= '$size2 = ' . $info['Size2'] . ";\n";
+                $output .= '$size1 = ' . $info['Size1'] . ";\n";
+                $output .= '$size2 = ' . $info['Size2'] . ";\n";
             } else {
-                $s .= '$originalsize = ' . $info['OriginalSize'] . ";\n";
+                $output .= '$originalsize = ' . $info['OriginalSize'] . ";\n";
                 if ($subset) {
-                    $s .= "\$subsetted = true;\n";
+                    $output .= "\$subsetted = true;\n";
                 }
             }
         }
 
-        $s .= '$desc = ' . $this->makeFontDescriptor($info) . ";\n";
-        $s .= '$cw = ' . $this->makeWidthArray($info['Widths']) . ";\n";
+        $output .= '$desc = ' . $this->makeFontDescriptor($info) . ";\n";
+        $output .= '$cw = ' . $this->makeWidthArray($info['Widths']) . ";\n";
         $diff = $this->makeFontEncoding($map);
         if ('' !== $diff) {
-            $s .= '$diff = \'' . $diff . "';\n";
+            $output .= '$diff = \'' . $diff . "';\n";
         }
-        $s .= '$uv = ' . $this->makeUnicodeArray($map) . ";\n";
+        $output .= '$uv = ' . $this->makeUnicodeArray($map) . ";\n";
 
-        $this->saveToFile($file, $s, 't');
+        $this->saveToFile($file, $output, 't');
     }
 
     /**
@@ -373,11 +297,11 @@ class MakeFont
     private function makeFontDescriptor(array $info): string
     {
         // Ascent
-        $fd = "[\n\t'Ascent' => " . ($info['Ascender'] ?? 0);
+        $output = "[\n\t'Ascent' => " . ($info['Ascender'] ?? 0);
         // Descent
-        $fd .= ",\n\t'Descent' => " . ($info['Descender'] ?? 0);
+        $output .= ",\n\t'Descent' => " . ($info['Descender'] ?? 0);
         // CapHeight
-        $fd .= ",\n\t'CapHeight' => " . ($info['CapHeight'] ?? $info['Ascender'] ?? 0);
+        $output .= ",\n\t'CapHeight' => " . ($info['CapHeight'] ?? $info['Ascender'] ?? 0);
 
         // Flags
         $flags = 0;
@@ -388,11 +312,11 @@ class MakeFont
         if (0 !== $info['ItalicAngle']) {
             $flags += 1 << 6;
         }
-        $fd .= ",\n\t'Flags' => " . $flags;
+        $output .= ",\n\t'Flags' => " . $flags;
         // FontBBox
-        $fd .= ",\n\t'FontBBox' => '[" . \implode(' ', $info['FontBBox']) . "]'";
+        $output .= ",\n\t'FontBBox' => '[" . \implode(' ', $info['FontBBox']) . "]'";
         // ItalicAngle
-        $fd .= ",\n\t'ItalicAngle' => " . $info['ItalicAngle'];
+        $output .= ",\n\t'ItalicAngle' => " . $info['ItalicAngle'];
         // StemV
         if (isset($info['StdVW'])) {
             $stemv = $info['StdVW'];
@@ -401,33 +325,34 @@ class MakeFont
         } else {
             $stemv = 70;
         }
-        $fd .= ",\n\t'StemV' => " . $stemv;
+        $output .= ",\n\t'StemV' => " . $stemv;
         // MissingWidth
-        $fd .= ",\n\t'MissingWidth' => " . $info['MissingWidth'] . "\n]";
+        $output .= ",\n\t'MissingWidth' => " . $info['MissingWidth'] . "\n]";
 
-        return $fd;
+        return $output;
     }
 
     /**
+     * Build differences from reference encoding.
+     *
      * @phpstan-param array<int, MapType> $map
      */
     private function makeFontEncoding(array $map): string
     {
-        // Build differences from reference encoding
         $ref = $this->loadMap('cp1252');
-        $s = '';
+        $output = '';
         $last = 0;
         for ($c = 32; $c <= 255; ++$c) {
             if ($map[$c]['name'] !== $ref[$c]['name']) {
                 if ($c !== $last + 1) {
-                    $s .= $c . ' ';
+                    $output .= $c . ' ';
                 }
                 $last = $c;
-                $s .= '/' . $map[$c]['name'] . ' ';
+                $output .= '/' . $map[$c]['name'] . ' ';
             }
         }
 
-        return \rtrim($s);
+        return \rtrim($output);
     }
 
     /**
@@ -461,24 +386,24 @@ class MakeFont
             $ranges[] = $range;
         }
 
-        $s = '';
+        $output = '';
         foreach ($ranges as $current) {
-            if ('' !== $s) {
-                $s .= ",\n\t";
+            if ('' !== $output) {
+                $output .= ",\n\t";
             } else {
-                $s = "[\n\t";
+                $output = "[\n\t";
             }
-            $s .= $current[0] . ' => ';
+            $output .= $current[0] . ' => ';
             $nb = $current[1] - $current[0] + 1;
             if ($nb > 1) {
-                $s .= "[" . $current[2] . ', ' . $nb . "]";
+                $output .= '[' . $current[2] . ', ' . $nb . ']';
             } else {
-                $s .= $current[2];
+                $output .= $current[2];
             }
         }
-        $s .= "\n]";
+        $output .= "\n]";
 
-        return $s;
+        return $output;
     }
 
     /**
@@ -486,58 +411,141 @@ class MakeFont
      */
     private function makeWidthArray(array $widths): string
     {
-        $s = "[\n\t";
-        for ($c = 0; $c <= 255; ++$c) {
-            if ("'" === \chr($c)) {
-                $s .= "'\\''";
-            } elseif ('\\' === \chr($c)) {
-                $s .= "'\\\\'";
-            } elseif ($c >= 32 && $c <= 126) {
-                $s .= "'" . \chr($c) . "'";
+        $output = "[\n\t";
+        for ($ch = 0; $ch <= 255; ++$ch) {
+            if ("'" === \chr($ch)) {
+                $output .= "'\\''";
+            } elseif ('\\' === \chr($ch)) {
+                $output .= "'\\\\'";
+            } elseif ($ch >= 32 && $ch <= 126) {
+                $output .= "'" . \chr($ch) . "'";
             } else {
-                $s .= "chr($c)";
+                $output .= "chr($ch)";
             }
-            $s .= ' => ' . $widths[$c];
-            if ($c < 255) {
-                $s .= ",\n\t";
+            $output .= ' => ' . $widths[$ch];
+            if ($ch < 255) {
+                $output .= ",\n\t";
             }
-//            if (($c + 1) % 22 === 0) {
-//                $s .= "\n\t";
-//            }
         }
-        $s .= "\n]";
+        $output .= "\n]";
 
-        return $s;
+        return $output;
     }
 
-
-    private function message(string $message, string $severity = ''): void
+    private function message(string $message, string $severity = 'Info'): void
     {
         if (\PHP_SAPI === 'cli') {
-            if ('' !== $severity) {
-                echo "$severity: ";
-            }
-            echo "$message\n";
+            echo "$severity: $message\n";
         } else {
-            if ('' !== $severity) {
-                echo "<b>$severity</b>: ";
-            }
-            echo "$message<br>";
+            echo "<b>$severity</b>: $message<br>";
         }
     }
 
-    private function round(float $factor, float $value):int
+    /**
+     * @phpstan-param FontInfoType $info
+     *
+     * @phpstan-return array<string, int>
+     */
+    private function parseAfmFile(string $afmFile, array &$info): array
     {
-        return (int)\round($factor * $value)    ;
+        if (!\file_exists($afmFile)) {
+            $this->error('AFM font file not found: ' . $afmFile);
+        }
+        $lines = \file($afmFile);
+        if (false === $lines || [] === $lines) {
+            $this->error('AFM font file empty or not readable: ' . $afmFile);
+        }
+
+        $cw = [];
+        foreach ($lines as $line) {
+            $values = \explode(' ', \rtrim($line));
+            if (\count($values) < 2) {
+                continue;
+            }
+            $entry = $values[0];
+            switch ($entry) {
+                case 'C':
+                    $cw[$values[7]] = (int) $values[4];
+                    break;
+                case 'Weight':
+                case 'FontName':
+                    $info[$entry] = $values[1];
+                    break;
+                case 'Ascender':
+                case 'Descender':
+                case 'UnderlineThickness':
+                case 'UnderlinePosition':
+                case 'CapHeight':
+                case 'StdVW':
+                case 'ItalicAngle':
+                    $info[$entry] = (int) $values[1];
+                    break;
+                case 'IsFixedPitch':
+                    $info[$entry] = (bool)($values[1]);
+                    break;
+                case 'FontBBox':
+                    $info[$entry] = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];
+                    break;
+            }
+        }
+
+        return $cw;
+    }
+
+    /**
+     * @param resource $handle
+     *
+     * @psalm-return positive-int
+     */
+    private function readSegment(mixed $handle): int
+    {
+        /** @phpstan-var array{marker: int, size: positive-int} $lines */
+        $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
+        if (128 !== $lines['marker']) {
+            \fclose($handle);
+            $this->error('Font file is not a valid binary Type1');
+        }
+
+        return $lines['size'];
+    }
+
+    private function round(float $factor, float $value): int
+    {
+        return (int) \round($factor * $value);
     }
 
     private function saveToFile(string $file, string $data, string $mode): void
     {
         $handle = \fopen($file, 'w' . $mode);
         if (!\is_resource($handle)) {
-            $this-> error('Unable to open file: ' . $file);
+            $this->error('Unable to open file: ' . $file);
         }
         \fwrite($handle, $data);
+        \fclose($handle);
+    }
+
+    /**
+     * @phpstan-param FontInfoType $info
+     */
+    private function updateSegments(string $fontFile, array &$info): void
+    {
+        $handle = \fopen($fontFile, 'r');
+        if (!\is_resource($handle)) {
+            $this->error('Unable to open file: ' . $fontFile);
+        }
+
+        // read the first segment
+        $size1 = $this->readSegment($handle);
+        $data = (string) \fread($handle, $size1);
+
+        // read the second segment
+        $size2 = $this->readSegment($handle);
+        $data .= (string) \fread($handle, $size2);
+
+        $info['Data'] = $data;
+        $info['Size1'] = $size1;
+        $info['Size2'] = $size2;
+
         \fclose($handle);
     }
 
