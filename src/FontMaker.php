@@ -481,7 +481,7 @@ class FontMaker
                     $info[$entry] = (int) $values[1];
                     break;
                 case 'IsFixedPitch':
-                    $info[$entry] = (bool)($values[1]);
+                    $info[$entry] = (bool) $values[1];
                     break;
                 case 'FontBBox':
                     $info[$entry] = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];

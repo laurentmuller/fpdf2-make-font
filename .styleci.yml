@@ -4,14 +4,10 @@ preset: symfony2023
 monolithic: true
 finder:
     exclude:
-        - "docs"
         - "vendor"
-        - "makefont"
-        - "src/font"
-        - "tests/fonts"
+        - "tests/sources"
+        - "tests/targets"
     name: "*.php"
-    not-name:
-        - "FPDF.php"
 enabled:
     - native_function_invocation
     - concat_with_spaces
