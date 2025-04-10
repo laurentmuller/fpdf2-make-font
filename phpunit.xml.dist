@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.2/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.4/phpunit.xsd"
          cacheDirectory="cache/phpunit"
          colors="true">
 
@@ -11,7 +11,7 @@
     </php>
 
     <testsuites>
-        <testsuite name="FPDF2 Test Suite">
+        <testsuite name="FPDF2 Make Font Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
@@ -20,10 +20,6 @@
         <include>
             <directory>./src</directory>
         </include>
-        <exclude>
-            <directory>./src/font</directory>
-            <directory>./tests/resources/</directory>
-        </exclude>
     </source>
 
     <coverage />

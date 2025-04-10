@@ -44,22 +44,15 @@ class FontMaker
     public function makeFont(string $fontFile, string $enc = 'cp1252', bool $embed = true, bool $subset = true): void
     {
         if (!\file_exists($fontFile)) {
-            $this->error('Font file not found: ' . $fontFile);
+            throw new MakeFontException('Font file not found: ' . $fontFile);
         }
         $ext = \strtolower(\substr($fontFile, -3));
 
-        $type = '';
-        switch ($ext) {
-            case 'ttf':
-            case 'otf':
-                $type = 'TrueType';
-                break;
-            case 'pfb':
-                $type = 'Type1';
-                break;
-            default:
-                $this->error('Unrecognized font file extension: ' . $ext);
-        }
+        $type = match ($ext) {
+            'ttf', 'otf' => 'TrueType',
+            'pfb' => 'Type1',
+            default => throw new MakeFontException('Unrecognized font file extension: ' . $ext),
+        };
 
         $map = $this->loadMap($enc);
 
@@ -73,9 +66,10 @@ class FontMaker
         if ($embed) {
             if (\function_exists('gzcompress')) {
                 $file = $basename . '.z';
-                $this->saveToFile($file, (string) \gzcompress($info['Data']), 'b');
+                $data = (string) \gzcompress($info['Data']);
+                $this->saveToFile($file, $data, 'b');
                 $info['File'] = $file;
-                $this->message('Font file compressed: ' . $file);
+                $this->message('Font file compressed generated: ' . $file);
             } else {
                 $info['File'] = \basename($fontFile);
                 $subset = false;
@@ -83,8 +77,9 @@ class FontMaker
             }
         }
 
-        $this->makeDefinitionFile($basename . '.php', $type, $enc, $embed, $subset, $map, $info);
-        $this->message('Font definition file generated: ' . $basename . '.php');
+        $phpFile = $basename . '.php';
+        $this->makeDefinitionFile($phpFile, $type, $enc, $embed, $subset, $map, $info);
+        $this->message('Font file definition generated: ' . $phpFile);
     }
 
     /**
@@ -111,12 +106,6 @@ class FontMaker
         ];
     }
 
-    private function error(string $message): never
-    {
-        $this->message($message, 'Error');
-        exit(1);
-    }
-
     /**
      * @phpstan-param array<int, MapType> $map
      *
@@ -125,17 +114,13 @@ class FontMaker
     private function getInfoFromTrueType(string $fontFile, bool $embed, bool $subset, array $map): array
     {
         // Return information from a TrueType font
-        try {
-            $ttf = new TTFParser($fontFile);
-            $ttf->parse();
-        } catch (\Throwable $e) {
-            $this->error($e->getMessage());
-        }
+        $parser = new TTFParser($fontFile);
+        $parser->parse();
 
         $info = $this->createEmptyFont();
         if ($embed) {
-            if (!$ttf->embeddable) {
-                $this->error('Font license does not allow embedding');
+            if (!$parser->embeddable) {
+                throw new MakeFontException('Font license does not allow embedding');
             }
             if ($subset) {
                 $chars = [];
@@ -144,35 +129,35 @@ class FontMaker
                         $chars[] = $v['uv'];
                     }
                 }
-                $ttf->subset($chars);
-                $info['Data'] = $ttf->build();
+                $parser->subset($chars);
+                $info['Data'] = $parser->build();
             } else {
                 $info['Data'] = (string) \file_get_contents($fontFile);
             }
             $info['OriginalSize'] = \strlen($info['Data']);
         }
-        $k = 1000 / $ttf->unitsPerEm;
-        $info['FontName'] = $ttf->postScriptName;
-        $info['Bold'] = $ttf->bold;
-        $info['ItalicAngle'] = $ttf->italicAngle;
-        $info['IsFixedPitch'] = $ttf->isFixedPitch;
-        $info['Ascender'] = $this->round($k, $ttf->typoAscender);
-        $info['Descender'] = $this->round($k, $ttf->typoDescender);
-        $info['UnderlineThickness'] = $this->round($k, $ttf->underlineThickness);
-        $info['UnderlinePosition'] = $this->round($k, $ttf->underlinePosition);
+        $k = 1000 / $parser->unitsPerEm;
+        $info['FontName'] = $parser->postScriptName;
+        $info['Bold'] = $parser->bold;
+        $info['ItalicAngle'] = $parser->italicAngle;
+        $info['IsFixedPitch'] = $parser->isFixedPitch;
+        $info['Ascender'] = $this->round($k, $parser->typoAscender);
+        $info['Descender'] = $this->round($k, $parser->typoDescender);
+        $info['UnderlineThickness'] = $this->round($k, $parser->underlineThickness);
+        $info['UnderlinePosition'] = $this->round($k, $parser->underlinePosition);
         $info['FontBBox'] = [
-            $this->round($k, $ttf->xMin),
-            $this->round($k, $ttf->yMin),
-            $this->round($k, $ttf->xMax),
-            $this->round($k, $ttf->yMax)];
-        $info['CapHeight'] = $this->round($k, $ttf->capHeight);
-        $info['MissingWidth'] = $this->round($k, $ttf->glyphs[0]['w']);
+            $this->round($k, $parser->xMin),
+            $this->round($k, $parser->yMin),
+            $this->round($k, $parser->xMax),
+            $this->round($k, $parser->yMax)];
+        $info['CapHeight'] = $this->round($k, $parser->capHeight);
+        $info['MissingWidth'] = $this->round($k, $parser->glyphs[0]['w']);
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $c => $v) {
             if (self::NOT_DEF !== $v['name']) {
-                if (isset($ttf->chars[$v['uv']])) {
-                    $id = $ttf->chars[$v['uv']];
-                    $w = $ttf->glyphs[$id]['w'];
+                if (isset($parser->chars[$v['uv']])) {
+                    $id = $parser->chars[$v['uv']];
+                    $w = $parser->glyphs[$id]['w'];
                     $widths[$c] = $this->round($k, $w);
                 } else {
                     $this->warning('Character ' . $v['name'] . ' is missing');
@@ -200,7 +185,7 @@ class FontMaker
         $cw = $this->parseAfmFile($afmFile, $info);
 
         if (!isset($info['FontName'])) {
-            $this->error('FontName missing in AFM file');
+            throw new MakeFontException('FontName missing in AFM file');
         }
         if (!isset($info['Ascender'])) {
             $info['Ascender'] = $info['FontBBox'][3];
@@ -233,7 +218,7 @@ class FontMaker
         $file = \sprintf('%s/map/%s.map', __DIR__, \strtolower($enc));
         $lines = \file($file);
         if (false === $lines || [] === $lines) {
-            $this->error('Encoding not found: ' . $enc);
+            throw new MakeFontException('Encoding not found: ' . $enc);
         }
         $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
@@ -434,11 +419,7 @@ class FontMaker
 
     private function message(string $message, string $severity = 'Info'): void
     {
-        if (\PHP_SAPI === 'cli') {
-            echo "$severity: $message\n";
-        } else {
-            echo "<b>$severity</b>: $message<br>";
-        }
+        echo "$severity: $message.\n";
     }
 
     /**
@@ -449,11 +430,11 @@ class FontMaker
     private function parseAfmFile(string $afmFile, array &$info): array
     {
         if (!\file_exists($afmFile)) {
-            $this->error('AFM font file not found: ' . $afmFile);
+            throw new MakeFontException('AFM font file not found: ' . $afmFile);
         }
-        $lines = \file($afmFile);
+        $lines = \file($afmFile, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
         if (false === $lines || [] === $lines) {
-            $this->error('AFM font file empty or not readable: ' . $afmFile);
+            throw new MakeFontException('AFM font file empty or not readable: ' . $afmFile);
         }
 
         $cw = [];
@@ -481,7 +462,7 @@ class FontMaker
                     $info[$entry] = (int) $values[1];
                     break;
                 case 'IsFixedPitch':
-                    $info[$entry] = (bool) $values[1];
+                    $info[$entry] = \filter_var($values[1], \FILTER_VALIDATE_BOOLEAN);
                     break;
                 case 'FontBBox':
                     $info[$entry] = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];
@@ -493,17 +474,14 @@ class FontMaker
     }
 
     /**
-     * @param resource $handle
-     *
      * @psalm-return positive-int
      */
-    private function readSegment(mixed $handle): int
+    private function readSegment(FileHandler $handler): int
     {
         /** @phpstan-var array{marker: int, size: positive-int} $lines */
-        $lines = \unpack('Cmarker/Ctype/Vsize', (string) \fread($handle, 6));
+        $lines = \unpack('Cmarker/Ctype/Vsize', $handler->read(6));
         if (128 !== $lines['marker']) {
-            \fclose($handle);
-            $this->error('Font file is not a valid binary Type1');
+            throw new MakeFontException('Font file is not a valid binary Type1');
         }
 
         return $lines['size'];
@@ -516,12 +494,9 @@ class FontMaker
 
     private function saveToFile(string $file, string $data, string $mode): void
     {
-        $handle = \fopen($file, 'w' . $mode);
-        if (!\is_resource($handle)) {
-            $this->error('Unable to open file: ' . $file);
-        }
-        \fwrite($handle, $data);
-        \fclose($handle);
+        $handler = new FileHandler($file, 'w' . $mode);
+        $handler->write($data);
+        $handler->close();
     }
 
     /**
@@ -529,24 +504,21 @@ class FontMaker
      */
     private function updateSegments(string $fontFile, array &$info): void
     {
-        $handle = \fopen($fontFile, 'r');
-        if (!\is_resource($handle)) {
-            $this->error('Unable to open file: ' . $fontFile);
-        }
+        $handler = new FileHandler($fontFile, 'r');
 
         // read the first segment
-        $size1 = $this->readSegment($handle);
-        $data = (string) \fread($handle, $size1);
+        $size1 = $this->readSegment($handler);
+        $data1 = $handler->read($size1);
 
         // read the second segment
-        $size2 = $this->readSegment($handle);
-        $data .= (string) \fread($handle, $size2);
+        $size2 = $this->readSegment($handler);
+        $data2 = $handler->read($size2);
 
-        $info['Data'] = $data;
+        $info['Data'] = $data1 . $data2;
         $info['Size1'] = $size1;
         $info['Size2'] = $size2;
 
-        \fclose($handle);
+        $handler->close();
     }
 
     private function warning(string $message): void

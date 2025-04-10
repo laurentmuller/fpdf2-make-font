@@ -16,7 +16,7 @@ namespace fpdf;
 /**
  * Class to parse a TTF font.
  */
-class TTFParser
+class TTFParser extends FileHandler
 {
     private const TAG_NAMES = [
         'cmap', 'cvt ', 'fpgm', 'glyf',
@@ -52,8 +52,6 @@ class TTFParser
     public int $yMax = 0;
     public int $yMin = 0;
     private bool $glyphNames = false;
-    /** @phpstan-var resource|closed-resource */
-    private mixed $handle;
     private int $indexToLocFormat = 0;
     private int $numberOfHMetrics = 0;
     private int $numGlyphs = 0;
@@ -68,22 +66,6 @@ class TTFParser
      *   data: string,
      *   checkSum: string}> */
     private array $tables = [];
-
-    public function __construct(string $file)
-    {
-        $handle = \fopen($file, 'r');
-        if (!\is_resource($handle)) {
-            $this->error('Unable to open file: ' . $file);
-        }
-        $this->handle = $handle;
-    }
-
-    public function __destruct()
-    {
-        if (\is_resource($this->handle)) {
-            \fclose($this->handle);
-        }
-    }
 
     public function build(): string
     {
@@ -313,7 +295,7 @@ class TTFParser
         $data = '';
         foreach ($this->subsettedGlyphs as $id) {
             $glyph = $this->glyphs[$id];
-            $this->seekFile($tableOffset + $glyph['offset']);
+            $this->seek($tableOffset + $glyph['offset']);
             $glyph_data = $this->read($glyph['length']);
             if (isset($glyph['components'])) {
                 // Composite glyph
@@ -416,11 +398,6 @@ class TTFParser
         return \pack('nn', $high + ($low >> 16), $low);
     }
 
-    private function error(string $msg): never
-    {
-        throw new \RuntimeException($msg);
-    }
-
     private function isBitSet(int $value, int $mask): bool
     {
         return ($value & $mask) === $mask;
@@ -437,9 +414,6 @@ class TTFParser
         $this->tables[$tag]['data'] = $this->read($length);
     }
 
-    /**
-     * @psalm-suppress PossiblyInvalidArgument
-     */
     private function parseCmap(): void
     {
         $this->seekTag('cmap');
@@ -455,7 +429,7 @@ class TTFParser
             }
         }
         if (0 === $offset31) {
-            $this->error('No Unicode encoding found');
+            throw new MakeFontException('No Unicode encoding found');
         }
 
         $startCount = [];
@@ -463,10 +437,10 @@ class TTFParser
         $idDelta = [];
         $idRangeOffset = [];
         $this->chars = [];
-        $this->seekFile($this->tables['cmap']['offset'] + $offset31);
+        $this->seek($this->tables['cmap']['offset'] + $offset31);
         $format = $this->readUShort();
         if (4 !== $format) {
-            $this->error('Unexpected subtable format: ' . $format);
+            throw new MakeFontException('Unexpected sub-table format: ' . $format);
         }
         $this->skip(2 * 2); // length, language
         $segCount = $this->readUShort() / 2;
@@ -481,7 +455,7 @@ class TTFParser
         for ($i = 0; $i < $segCount; ++$i) {
             $idDelta[$i] = $this->readShort();
         }
-        $offset = (int) \ftell($this->handle);
+        $offset = $this->tell();
         for ($i = 0; $i < $segCount; ++$i) {
             $idRangeOffset[$i] = $this->readUShort();
         }
@@ -492,7 +466,7 @@ class TTFParser
             $d = $idDelta[$i];
             $ro = $idRangeOffset[$i];
             if ($ro > 0) {
-                $this->seekFile($offset + 2 * $i + $ro);
+                $this->seek($offset + 2 * $i + $ro);
             }
             for ($c = $c1; $c <= $c2; ++$c) {
                 if (0xFFFF === $c) {
@@ -521,7 +495,7 @@ class TTFParser
         $tableOffset = $this->tables['glyf']['offset'];
         foreach ($this->glyphs as &$glyph) {
             if ($glyph['length'] > 0) {
-                $this->seekFile($tableOffset + $glyph['offset']);
+                $this->seek($tableOffset + $glyph['offset']);
                 if ($this->readShort() < 0) {
                     // Composite glyph
                     $this->skip(4 * 2); // xMin, yMin, xMax, yMax
@@ -558,7 +532,7 @@ class TTFParser
         $this->skip(3 * 4); // version, fontRevision, checkSumAdjustment
         $magicNumber = $this->readULong();
         if (0x5F0F3CF5 !== $magicNumber) {
-            $this->error('Incorrect magic number');
+            throw new MakeFontException('Incorrect magic number');
         }
         $this->skip(2); // flags
         $this->unitsPerEm = $this->readUShort();
@@ -654,7 +628,7 @@ class TTFParser
             $offset = $this->readUShort();
             if (6 === $nameID) {
                 // PostScript name
-                $this->seekFile($tableOffset + $stringOffset + $offset);
+                $this->seek($tableOffset + $stringOffset + $offset);
                 $str = $this->read($length);
                 $str = \str_replace(\chr(0), '', $str);
                 $str = (string) \preg_replace('|[ \[\](){}<>/%]|', '', $str);
@@ -663,7 +637,7 @@ class TTFParser
             }
         }
         if ('' === $this->postScriptName) {
-            $this->error('PostScript name not found');
+            throw new MakeFontException('PostScript name not found');
         }
     }
 
@@ -671,10 +645,10 @@ class TTFParser
     {
         $version = $this->read(4);
         if ('OTTO' === $version) {
-            $this->error('OpenType fonts based on PostScript outlines are not supported');
+            throw new MakeFontException('OpenType fonts based on PostScript outlines are not supported');
         }
         if ("\x00\x01\x00\x00" !== $version) {
-            $this->error('Unrecognized file format');
+            throw new MakeFontException('Unrecognized file format');
         }
         $numTables = $this->readUShort();
         $this->skip(3 * 2); // searchRange, entrySelector, rangeShift
@@ -752,14 +726,6 @@ class TTFParser
         }
     }
 
-    /**
-     * @psalm-suppress PossiblyInvalidArgument
-     */
-    private function read(int $length): string
-    {
-        return $length > 0 ? (string) \fread($this->handle, $length) : '';
-    }
-
     private function readShort(): int
     {
         /** @phpstan-var array{n: int} $a */
@@ -788,20 +754,12 @@ class TTFParser
         return $a['n'];
     }
 
-    /**
-     * @psalm-suppress PossiblyInvalidArgument
-     */
-    private function seekFile(int $offset, int $whence = \SEEK_SET): void
-    {
-        \fseek($this->handle, $offset, $whence);
-    }
-
     private function seekTag(string $tag): void
     {
         if (!isset($this->tables[$tag])) {
-            $this->error('Table not found: ' . $tag);
+            throw new MakeFontException('Table not found: ' . $tag);
         }
-        $this->seekFile($this->tables[$tag]['offset']);
+        $this->seek($this->tables[$tag]['offset']);
     }
 
     private function setTable(string $tag, string $data): void
@@ -814,11 +772,6 @@ class TTFParser
         $this->tables[$tag]['data'] = $data;
         $this->tables[$tag]['length'] = $length;
         $this->tables[$tag]['checkSum'] = $this->checkSum($data);
-    }
-
-    private function skip(int $offset): void
-    {
-        $this->seekFile($offset, \SEEK_CUR);
     }
 
     /**

@@ -5,5 +5,3 @@ global_exclude_dirs:
 rules:
     php.class_too_long:
         enabled: false
-    use_exit_function:
-        enabled: false

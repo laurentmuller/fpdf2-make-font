@@ -14,9 +14,10 @@ declare(strict_types=1);
 namespace fpdf\Tests;
 
 use fpdf\FontMaker;
+use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
 
-class TestFontMaker extends TestCase
+class FontMakerTest extends TestCase
 {
     private const IGNORED_KEY = ['file', 'originalsize'];
 
@@ -44,11 +45,45 @@ class TestFontMaker extends TestCase
         $this->compareFont($name);
     }
 
+    public function testFontType1(): void
+    {
+        $name = 'FontType1';
+        $this->generateFont($name, ext: 'pfb');
+        $this->compareFont($name);
+    }
+
     public function testHelvetica(): void
     {
         $name = 'helvetica';
         $this->generateFont($name, false);
         $this->compareFont($name);
+    }
+
+    public function testInvalidEncoding(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Encoding not found: fake');
+        $fontFile = $this->fonts . 'times.ttf';
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile, 'fake');
+    }
+
+    public function testInvalidExtension(): void
+    {
+        $fontFile = __FILE__;
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Unrecognized font file extension: php');
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
+    public function testInvalidFontFile(): void
+    {
+        $fontFile = 'fake.txt';
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Font file not found: fake.txt');
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
     }
 
     public function testRobotoRegular(): void
@@ -74,9 +109,9 @@ class TestFontMaker extends TestCase
         self::assertArrayIsEqualToArrayIgnoringListOfKeys($source, $target, self::IGNORED_KEY);
     }
 
-    private function generateFont(string $name, bool $embed = true): void
+    private function generateFont(string $name, bool $embed = true, string $ext = 'ttf'): void
     {
-        $fontFile = $this->fonts . $name . '.ttf';
+        $fontFile = $this->fonts . $name . '.' . $ext;
         $fontMaker = new FontMaker();
         $fontMaker->makeFont(fontFile: $fontFile, embed: $embed);
     }
