@@ -67,6 +67,7 @@ $finder = Finder::create()
     ->append([
         __FILE__,
         __DIR__ . '/rector.php',
+        __DIR__ . '/create_phar.php',
     ]);
 
 $config = new Config();

@@ -48,14 +48,21 @@ class FontMakerTest extends TestCase
     public function testFontType1(): void
     {
         $name = 'FontType1';
-        $this->generateFont($name, ext: 'pfb');
+        $this->generateFont(name: $name, ext: 'pfb');
         $this->compareFont($name);
     }
 
     public function testHelvetica(): void
     {
         $name = 'helvetica';
-        $this->generateFont($name, false);
+        $this->generateFont(name: $name, embed: false);
+        $this->compareFont($name);
+    }
+
+    public function testHelvetica1258(): void
+    {
+        $name = 'helvetica1258';
+        $this->generateFont(name: $name, embed: false, encoding: 'cp1258');
         $this->compareFont($name);
     }
 
@@ -127,11 +134,15 @@ class FontMakerTest extends TestCase
         self::assertArrayIsEqualToArrayIgnoringListOfKeys($source, $target, self::IGNORED_KEY);
     }
 
-    private function generateFont(string $name, bool $embed = true, string $ext = 'ttf'): void
-    {
+    private function generateFont(
+        string $name,
+        bool $embed = true,
+        string $ext = 'ttf',
+        string $encoding = FontMaker::DEFAULT_ENCODING
+    ): void {
         $fontFile = $this->fonts . $name . '.' . $ext;
         $fontMaker = new FontMaker();
-        $fontMaker->makeFont(fontFile: $fontFile, embed: $embed);
+        $fontMaker->makeFont(fontFile: $fontFile, encoding: $encoding, embed: $embed);
     }
 
     /**

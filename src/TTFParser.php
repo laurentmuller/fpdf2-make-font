@@ -30,8 +30,6 @@ class TTFParser extends FileHandler
     public array $chars = [];
     public bool $embeddable = false;
     /**
-     * leftSideBearings (lsb): [numGlyphs - numberOfHMetrics].
-     *
      * @phpstan-var array<int, array{
      *   name: string|int,
      *   width: int,
@@ -300,7 +298,7 @@ class TTFParser extends FileHandler
             $this->seek($tableOffset + $glyph['offset']);
             $glyphData = $this->read($glyph['length']);
             if (isset($glyph['components'])) {
-                // Composite glyph
+                // composite glyph
                 foreach ($glyph['components'] as $offset => $cid) {
                     $ssid = $this->glyphs[$cid]['ssid'];
                     $glyphData = \substr_replace($glyphData, \pack('n', $ssid), $offset, 2);
@@ -365,7 +363,6 @@ class TTFParser extends FileHandler
             $numberOfGlyphs = \count($this->subsettedGlyphs);
             $numNames = 0;
             $names = '';
-            // 2 * 4 + 2 * 2 + 5 * 4
             $data = $this->read(32);
             $data .= \pack('n', $numberOfGlyphs);
             foreach ($this->subsettedGlyphs as $id) {
@@ -383,7 +380,6 @@ class TTFParser extends FileHandler
             // Version 3.0
             $this->skip(4);
             $data = "\x00\x03\x00\x00";
-            // 4 + 2 * 2 + 5 * 4
             $data .= $this->read(28);
         }
         $this->setTable('post', $data);
@@ -487,8 +483,8 @@ class TTFParser extends FileHandler
                 } else {
                     $gid = $c + $d;
                 }
-                if ($gid >= 65536) {
-                    $gid -= 65536;
+                if ($gid >= 0x010000) {
+                    $gid -= 0x010000;
                 }
                 if ($gid > 0) {
                     $this->chars[$c] = $gid;
@@ -509,7 +505,7 @@ class TTFParser extends FileHandler
                 if ($this->readShort() < 0) {
                     // Composite glyph
                     $this->skip(8); // xMin, yMin, xMax, yMax
-                    $offset = 10; // 5 * 2
+                    $offset = 10;
                     $components = [];
                     do {
                         $flags = $this->readUShort();
@@ -545,11 +541,11 @@ class TTFParser extends FileHandler
         $this->skip(12); // version, fontRevision, checkSumAdjustment
         $magicNumber = $this->readULong();
         if (0x5F0F3CF5 !== $magicNumber) {
-            throw MakeFontException::format('Incorrect magic number: 0x%X.', $magicNumber);
+            throw MakeFontException::format('Incorrect magic number: 0x%08X.', $magicNumber);
         }
         $this->skip(2); // flags
         $this->unitsPerEm = $this->readUShort();
-        $this->skip(16); // created, modified: 2 * 8
+        $this->skip(16); // created, modified
         $this->xMin = $this->readShort();
         $this->yMin = $this->readShort();
         $this->xMax = $this->readShort();
@@ -603,27 +599,30 @@ class TTFParser extends FileHandler
 
     /**
      * Index to Location (loca).
-     *
-     * @psalm-suppress InvalidPropertyAssignmentValue
      */
     private function parseLoca(): void
     {
         $this->seekTag('loca');
         $offsets = [];
         if (0 === $this->indexToLocFormat) {
-            // Short format
+            // short format
             for ($i = 0; $i <= $this->numGlyphs; ++$i) {
                 $offsets[] = 2 * $this->readUShort();
             }
         } else {
-            // Long format
+            // long format
             for ($i = 0; $i <= $this->numGlyphs; ++$i) {
                 $offsets[] = $this->readULong();
             }
         }
         for ($i = 0; $i < $this->numGlyphs; ++$i) {
-            $this->glyphs[$i]['offset'] = $offsets[$i];
-            $this->glyphs[$i]['length'] = $offsets[$i + 1] - $offsets[$i];
+            $this->glyphs[$i] = \array_merge(
+                $this->glyphs[$i],
+                [
+                    'offset' => $offsets[$i],
+                    'length' => $offsets[$i + 1] - $offsets[$i],
+                ]
+            );
         }
     }
 
@@ -674,8 +673,8 @@ class TTFParser extends FileHandler
         if (0x4F54544F === $version) { // 'OTTO'
             throw MakeFontException::instance('OpenType font based on PostScript outlines is not supported.');
         }
-        if (0x00010000 !== $version) { // 65536: TrueType outlines
-            throw MakeFontException::format('Unrecognized file version: 0x%X.', $version);
+        if (0x010000 !== $version) { // TrueType outlines
+            throw MakeFontException::format('Unrecognized file version: 0x%06X.', $version);
         }
         $numTables = $this->readUShort();
         $this->skip(6); // searchRange, entrySelector, rangeShift
@@ -764,7 +763,7 @@ class TTFParser extends FileHandler
         $values = $this->unpack('nn', 2);
         $value = $values['n'];
         if ($value >= 0x8000) {
-            $value -= 65536;
+            $value -= 0x010000;
         }
 
         return $value;

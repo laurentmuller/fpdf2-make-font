@@ -9,13 +9,13 @@ PLATHEY.
 **Function:**
 
 ```php
-makeFont(string fontFile [, string enc [, boolean embed [, boolean subset]]])
+makeFont(string fontFile [, string encoding [, boolean embed [, boolean subset]]])
 ```
 
 **Parameters:**
 
 - `fontFile`: The path to the `.ttf`, `.otf` or `.pfb` file.
-- `enc`: The name of the encoding to use. The default value is `cp1252`.
+- `encoding`: The name of the encoding to use. The default value is `cp1252`.
 - `embed`: Whether to embed the font or not. The default value is `true`.
 - `subset`: Whether to subset the font or not. The default value is `true`.
 

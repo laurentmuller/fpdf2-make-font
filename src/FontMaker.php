@@ -39,28 +39,35 @@ namespace fpdf;
  */
 class FontMaker
 {
+    /**
+     * The default encoding ('cp1252').
+     */
+    public const DEFAULT_ENCODING = 'cp1252';
+
     private const NOT_DEF = '.notdef';
 
-    public function makeFont(string $fontFile, string $enc = 'cp1252', bool $embed = true, bool $subset = true): void
-    {
+    public function makeFont(
+        string $fontFile,
+        string $encoding = self::DEFAULT_ENCODING,
+        bool $embed = true,
+        bool $subset = true
+    ): void {
         if (!\file_exists($fontFile)) {
             throw MakeFontException::format('Font file not found: %s.', $fontFile);
         }
-        $ext = \strtolower(\substr($fontFile, -3));
 
+        $ext = \strtolower(\substr($fontFile, -3));
         $type = match ($ext) {
             'ttf', 'otf' => 'TrueType',
             'pfb' => 'Type1',
             default => throw MakeFontException::format('Unrecognized font file extension: %s.', $ext),
         };
 
-        $map = $this->loadMap($enc);
-
-        if ('TrueType' === $type) {
-            $info = $this->getInfoFromTrueType($fontFile, $embed, $subset, $map);
-        } else {
-            $info = $this->getInfoFromType1($fontFile, $embed, $map);
-        }
+        $map = $this->loadMap($encoding);
+        $info = match ($type) {
+            'TrueType' => $this->getInfoFromTrueType($fontFile, $embed, $map, $subset),
+            default => $this->getInfoFromType1($fontFile, $embed, $map)
+        };
 
         $basename = \substr(\basename($fontFile), 0, -4);
         if ($embed) {
@@ -78,7 +85,7 @@ class FontMaker
         }
 
         $phpFile = $basename . '.php';
-        $this->makeDefinitionFile($phpFile, $type, $enc, $embed, $subset, $map, $info);
+        $this->makeDefinitionFile($phpFile, $type, $encoding, $embed, $subset, $map, $info);
         $this->message('Font file definition generated: ' . $phpFile);
     }
 
@@ -111,7 +118,7 @@ class FontMaker
      *
      * @phpstan-return FontInfoType
      */
-    private function getInfoFromTrueType(string $fontFile, bool $embed, bool $subset, array $map): array
+    private function getInfoFromTrueType(string $fontFile, bool $embed, array $map, bool $subset): array
     {
         // Return information from a TrueType font
         $parser = new TTFParser($fontFile);
@@ -163,7 +170,7 @@ class FontMaker
                 $width = $parser->glyphs[$id]['width'];
                 $widths[$index] = $this->round($factor, $width);
             } else {
-                $this->warning('Character ' . $value['name'] . ' is missing');
+                $this->warning(\sprintf('Character %s is missing', $value['name']));
             }
         }
         $info['Widths'] = $widths;
@@ -203,7 +210,7 @@ class FontMaker
                 if (isset($cw[$v['name']])) {
                     $widths[$c] = $cw[$v['name']];
                 } else {
-                    $this->warning('Character ' . $v['name'] . ' is missing');
+                    $this->warning(\sprintf('Character %s is missing', $v['name']));
                 }
             }
         }
@@ -215,20 +222,25 @@ class FontMaker
     /**
      * @phpstan-return array<int, MapType>
      */
-    private function loadMap(string $enc): array
+    private function loadMap(string $encoding): array
     {
-        $file = \sprintf('%s/map/%s.map', __DIR__, \strtolower($enc));
-        $lines = \file($file);
-        if (false === $lines || [] === $lines) {
-            throw MakeFontException::format('Encoding not found: %s.', $enc);
+        $file = \sprintf('%s/map/%s.map', __DIR__, \strtolower($encoding));
+        if (!\file_exists($file)) {
+            throw MakeFontException::format('Encoding not found: %s.', $encoding);
         }
+
+        $lines = \file($file, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
+        if (false === $lines || [] === $lines) {
+            throw MakeFontException::format('Encoding not found: %s.', $encoding);
+        }
+
         $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
-            $e = \explode(' ', \rtrim($line));
-            $c = (int) \hexdec(\substr($e[0], 1));
-            $uv = (int) \hexdec(\substr($e[1], 2));
-            $name = $e[2];
-            $map[$c] = ['uv' => $uv, 'name' => $name];
+            $values = \explode(' ', \rtrim($line));
+            $key = (int) \hexdec(\substr($values[0], 1));
+            $uv = (int) \hexdec(\substr($values[1], 2));
+            $name = $values[2];
+            $map[$key] = ['uv' => $uv, 'name' => $name];
         }
 
         return $map;
@@ -241,7 +253,7 @@ class FontMaker
     private function makeDefinitionFile(
         string $file,
         string $type,
-        string $enc,
+        string $encoding,
         bool $embed,
         bool $subset,
         array $map,
@@ -250,7 +262,7 @@ class FontMaker
         $output = "<?php\n";
         $output .= '$type = \'' . $type . "';\n";
         $output .= '$name = \'' . ($info['FontName'] ?? '') . "';\n";
-        $output .= '$enc = \'' . $enc . "';\n";
+        $output .= '$enc = \'' . $encoding . "';\n";
         $output .= '$up = ' . $info['UnderlinePosition'] . ";\n";
         $output .= '$ut = ' . $info['UnderlineThickness'] . ";\n";
 
@@ -269,9 +281,11 @@ class FontMaker
 
         $output .= '$desc = ' . $this->makeFontDescriptor($info) . ";\n";
         $output .= '$cw = ' . $this->makeWidthArray($info['Widths']) . ";\n";
-        $diff = $this->makeFontEncoding($map);
-        if ('' !== $diff) {
-            $output .= '$diff = \'' . $diff . "';\n";
+        if (self::DEFAULT_ENCODING !== $encoding) {
+            $diff = $this->makeFontEncoding($map);
+            if ('' !== $diff) {
+                $output .= '$diff = \'' . $diff . "';\n";
+            }
         }
         $output .= '$uv = ' . $this->makeUnicodeArray($map) . ";\n";
 
@@ -326,16 +340,16 @@ class FontMaker
      */
     private function makeFontEncoding(array $map): string
     {
-        $ref = $this->loadMap('cp1252');
-        $output = '';
         $last = 0;
-        for ($c = 32; $c <= 255; ++$c) {
-            if ($map[$c]['name'] !== $ref[$c]['name']) {
-                if ($c !== $last + 1) {
-                    $output .= $c . ' ';
+        $output = '';
+        $source = $this->loadMap(self::DEFAULT_ENCODING);
+        for ($ch = 32; $ch <= 255; ++$ch) {
+            if ($map[$ch]['name'] !== $source[$ch]['name']) {
+                if ($ch !== $last + 1) {
+                    $output .= $ch . ' ';
                 }
-                $last = $c;
-                $output .= '/' . $map[$c]['name'] . ' ';
+                $last = $ch;
+                $output .= '/' . $map[$ch]['name'] . ' ';
             }
         }
 
@@ -400,15 +414,14 @@ class FontMaker
     {
         $output = "[\n\t";
         for ($ch = 0; $ch <= 255; ++$ch) {
-            if ("'" === \chr($ch)) {
-                $output .= "'\\''";
-            } elseif ('\\' === \chr($ch)) {
-                $output .= "'\\\\'";
-            } elseif ($ch >= 32 && $ch <= 126) {
-                $output .= "'" . \chr($ch) . "'";
-            } else {
-                $output .= "chr($ch)";
-            }
+            $output .= match (true) {
+                // single quote and backslash characters
+                39 === $ch, 92 === $ch => \sprintf("'%s'", \addslashes(\chr($ch))),
+                //  ASCII printable characters
+                $ch >= 32 && $ch <= 126 => \sprintf("'%s'", \chr($ch)),
+                // ASCII control characters and extended codes
+                default => "\chr($ch)"
+            };
             $output .= ' => ' . $widths[$ch];
             if ($ch < 255) {
                 $output .= ",\n\t";
