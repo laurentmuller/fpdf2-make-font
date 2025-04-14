@@ -433,7 +433,11 @@ class FontMaker
 
     private function message(string $message, string $severity = 'Info'): void
     {
-        echo "$severity: $message.\n";
+        if (\PHP_SAPI === 'cli') {
+            echo "$severity: $message.\n";
+        } else {
+            echo "$severity: $message.<br>";
+        }
     }
 
     /**

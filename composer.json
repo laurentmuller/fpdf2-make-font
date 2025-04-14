@@ -24,7 +24,8 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "ext-zip": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",

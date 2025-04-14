@@ -148,6 +148,12 @@ $pdf->write(10, 'Enjoy new fonts with FPDF!');
 $pdf->output();
 ```
 
+**User interface:**
+
+A small application has been created under the `ui` directory.
+
+![User Interface](images/ui_light.png)
+
 ## Code Quality
 
 [![SymfonyInsight](https://insight.symfony.com/projects/7f51544f-dfa3-4123-aed2-9c9dc8b4277f/mini.svg)](https://insight.symfony.com/projects/7f51544f-dfa3-4123-aed2-9c9dc8b4277f)
