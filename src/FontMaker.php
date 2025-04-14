@@ -78,8 +78,8 @@ class FontMaker
                 $info['File'] = $file;
                 $this->message('Font file compressed generated: ' . $file);
             } else {
-                $info['File'] = \basename($fontFile);
                 $subset = false;
+                $info['File'] = \basename($fontFile);
                 $this->warning('Font file could not be compressed (zlib extension not available)');
             }
         }

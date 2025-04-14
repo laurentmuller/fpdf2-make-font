@@ -20,10 +20,12 @@ if (\ini_get('phar.readonly')) {
     exit(1);
 }
 
-function addFiles(Phar $phar, string $source, int $offset): void
+function addFiles(Phar $phar, string $baseDirectory, string $sourceDirectory): void
 {
+    $offset = \strlen($baseDirectory) + 1;
+    $fullPath = $baseDirectory . $sourceDirectory;
     $flags = FilesystemIterator::SKIP_DOTS | FilesystemIterator::UNIX_PATHS;
-    $directory = new RecursiveDirectoryIterator($source, $flags);
+    $directory = new RecursiveDirectoryIterator($fullPath, $flags);
     $iterator = new RecursiveIteratorIterator($directory);
     foreach ($iterator as $file) {
         $path = $file->getPathname();
@@ -38,23 +40,22 @@ function addFiles(Phar $phar, string $source, int $offset): void
  * Run after: composer install
  */
 try {
-    $root_dir = \str_replace(\DIRECTORY_SEPARATOR, '/', __DIR__);
-    $build_dir = $root_dir . '/build';
-    $phar_file = $build_dir . '/makeFont.phar';
-    $offset = \strlen($root_dir) + 1;
+    $baseDirectory = \str_replace(\DIRECTORY_SEPARATOR, '/', __DIR__);
+    $buildDirectory = $baseDirectory . '/build';
+    $pharFile = $buildDirectory . '/makeFont.phar';
 
-    if (!\is_dir($build_dir) && !\mkdir($build_dir)) {
-        echo "Unable to create the output directory: $build_dir.\n";
+    if (!\is_dir($buildDirectory) && !\mkdir($buildDirectory)) {
+        echo "Unable to create the output directory: $buildDirectory.\n";
         exit(1);
     }
 
-    if (\is_file($phar_file) && !\unlink($phar_file)) {
-        echo "Unable to remove the old Phar: $phar_file.\n";
+    if (\is_file($pharFile) && !\unlink($pharFile)) {
+        echo "Unable to remove the old Phar: $pharFile.\n";
         exit(1);
     }
 
     // create phar
-    $phar = new Phar($phar_file);
+    $phar = new Phar($pharFile);
     $phar->setStub("<?php
         require 'phar://' . __FILE__ . '/src/makeFont.php';
         __HALT_COMPILER();
@@ -62,16 +63,18 @@ try {
 
     // add the src and vendor files
     $phar->startBuffering();
-    addFiles($phar, $root_dir . '/src', $offset);
-    addFiles($phar, $root_dir . '/vendor', $offset);
+    addFiles($phar, $baseDirectory, '/src');
+    addFiles($phar, $baseDirectory, '/vendor');
     $phar->stopBuffering();
 
     // compress
     $phar->compressFiles(Phar::GZ);
-    // Make the file executable
-    \chmod($phar_file, 0o770);
 
-    echo "$phar_file successfully created." . \PHP_EOL;
+    // Make the file executable
+    \chmod($pharFile, 0o770);
+
+    echo "$pharFile successfully created.";
 } catch (Exception $e) {
-    echo $e->getMessage();
+    echo 'Error: ' . $e->getMessage() . "\n";
+    exit(1);
 }

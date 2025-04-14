@@ -201,12 +201,12 @@ class TTFParser extends FileHandler
                     $ssid = $this->glyphs[$this->chars[$c]]['ssid'];
                     $glyphIdArray .= \pack('n', $ssid);
                 }
-            } else {
-                // segment with a single char
-                $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
-                $idDelta[] = $ssid - $start;
-                $idRangeOffset[] = 0;
+                continue;
             }
+            // segment with a single char
+            $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
+            $idDelta[] = $ssid - $start;
+            $idRangeOffset[] = 0;
         }
 
         return [
