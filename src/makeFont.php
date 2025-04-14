@@ -18,10 +18,6 @@ if (\PHP_VERSION_ID < 80200) { // @phpstan-ignore smaller.alwaysFalse
     exit(1);
 }
 
-if (\is_file(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
-}
-
 if (1 === $argc) {
     $help = <<<HELP
             makeFont v1.0.0
@@ -38,6 +34,11 @@ if (1 === $argc) {
     echo $help;
 
     return;
+}
+
+$file = __DIR__ . '/../vendor/autoload.php';
+if (\is_file($file)) {
+    require $file;
 }
 
 try {

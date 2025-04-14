@@ -20,6 +20,9 @@
         <include>
             <directory>./src</directory>
         </include>
+        <exclude>
+            <file>./src/makeFont.php</file>
+        </exclude>
     </source>
 
     <coverage />

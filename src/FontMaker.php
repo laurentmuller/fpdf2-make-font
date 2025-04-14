@@ -143,22 +143,21 @@ class FontMaker
             }
             $info['OriginalSize'] = \strlen($info['Data']);
         }
-        $factor = 1000 / $parser->unitsPerEm;
         $info['FontName'] = $parser->postScriptName;
         $info['Bold'] = $parser->bold;
         $info['ItalicAngle'] = $parser->italicAngle;
         $info['IsFixedPitch'] = $parser->isFixedPitch;
-        $info['Ascender'] = $this->round($factor, $parser->typoAscender);
-        $info['Descender'] = $this->round($factor, $parser->typoDescender);
-        $info['UnderlineThickness'] = $this->round($factor, $parser->underlineThickness);
-        $info['UnderlinePosition'] = $this->round($factor, $parser->underlinePosition);
+        $info['Ascender'] = $parser->scale($parser->typoAscender);
+        $info['Descender'] = $parser->scale($parser->typoDescender);
+        $info['UnderlineThickness'] = $parser->scale($parser->underlineThickness);
+        $info['UnderlinePosition'] = $parser->scale($parser->underlinePosition);
         $info['FontBBox'] = [
-            $this->round($factor, $parser->xMin),
-            $this->round($factor, $parser->yMin),
-            $this->round($factor, $parser->xMax),
-            $this->round($factor, $parser->yMax)];
-        $info['CapHeight'] = $this->round($factor, $parser->capHeight);
-        $info['MissingWidth'] = $this->round($factor, $parser->glyphs[0]['width']);
+            $parser->scale($parser->xMin),
+            $parser->scale($parser->yMin),
+            $parser->scale($parser->xMax),
+            $parser->scale($parser->yMax)];
+        $info['CapHeight'] = $parser->scale($parser->capHeight);
+        $info['MissingWidth'] = $parser->scale($parser->glyphs[0]['width']);
         $widths = \array_fill(0, 256, $info['MissingWidth']);
         foreach ($map as $index => $value) {
             if (self::NOT_DEF === $value['name']) {
@@ -168,7 +167,7 @@ class FontMaker
             if (isset($parser->chars[$uv])) {
                 $id = $parser->chars[$uv];
                 $width = $parser->glyphs[$id]['width'];
-                $widths[$index] = $this->round($factor, $width);
+                $widths[$index] = $parser->scale($width);
             } else {
                 $this->warning(\sprintf('Character %s is missing', $value['name']));
             }
@@ -500,11 +499,6 @@ class FontMaker
         }
 
         return $values['size'];
-    }
-
-    private function round(float $factor, float $value): int
-    {
-        return (int) \round($factor * $value);
     }
 
     private function saveToFile(string $file, string $data, string $mode): void

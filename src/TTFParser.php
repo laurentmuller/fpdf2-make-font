@@ -46,7 +46,7 @@ class TTFParser extends FileHandler
     public int $typoDescender = 0;
     public int $underlinePosition = 0;
     public int $underlineThickness = 0;
-    public int $unitsPerEm = 0;
+    public int $unitsPerEm = 1000;
     public int $xMax = 0;
     public int $xMin = 0;
     public int $yMax = 0;
@@ -95,6 +95,11 @@ class TTFParser extends FileHandler
         $this->parsePost();
     }
 
+    public function scale(float $value): int
+    {
+        return (int) \round($value * 1000.0 / (float) $this->unitsPerEm);
+    }
+
     /**
      * @phpstan-param array<int, int> $chars
      */
@@ -130,7 +135,7 @@ class TTFParser extends FileHandler
             return;
         }
 
-        // Divide charset in contiguous segments
+        // divide charset in contiguous segments
         $segments = $this->buildCmapSegments();
         [$startCount, $endCount, $idDelta, $idRangeOffset, $glyphIdArray] = $this->buildCmapFormat($segments);
         $segCount = \count($segments);
@@ -189,7 +194,7 @@ class TTFParser extends FileHandler
             $startCount[] = $start;
             $endCount[] = $end;
             if ($start !== $end) {
-                // Segment with multiple chars
+                // segment with multiple chars
                 $idDelta[] = 0;
                 $idRangeOffset[] = \strlen($glyphIdArray) + ($count - $i) * 2;
                 for ($c = $start; $c <= $end; ++$c) {
@@ -197,7 +202,7 @@ class TTFParser extends FileHandler
                     $glyphIdArray .= \pack('n', $ssid);
                 }
             } else {
-                // Segment with a single char
+                // segment with a single char
                 $ssid = $start < 0xFFFF ? $this->glyphs[$this->chars[$start]]['ssid'] : 0;
                 $idDelta[] = $ssid - $start;
                 $idRangeOffset[] = 0;
@@ -254,7 +259,7 @@ class TTFParser extends FileHandler
             $offset += \strlen($this->tables[$tag]['data']);
         }
 
-        // Build offset table
+        // build offset table
         $entrySelector = 0;
         $n = $numTables;
         while (1 !== $n) {
@@ -269,7 +274,7 @@ class TTFParser extends FileHandler
             $offsetTable .= $tag . $table['checkSum'] . \pack('NN', $table['offset'], $table['length']);
         }
 
-        // Compute checkSumAdjustment (0xB1B0AFBA - font checkSum)
+        // compute checkSumAdjustment (0xB1B0AFBA - font checkSum)
         $s = $this->checkSum($offsetTable);
         foreach ($tags as $tag) {
             $s .= $this->tables[$tag]['checkSum'];
@@ -359,7 +364,7 @@ class TTFParser extends FileHandler
     {
         $this->seekTag('post');
         if ($this->glyphNames) {
-            // Version 2.0
+            // version 2.0
             $numberOfGlyphs = \count($this->subsettedGlyphs);
             $numNames = 0;
             $names = '';
@@ -377,7 +382,7 @@ class TTFParser extends FileHandler
             }
             $data .= $names;
         } else {
-            // Version 3.0
+            // version 3.0
             $this->skip(4);
             $data = "\x00\x03\x00\x00";
             $data .= $this->read(28);
@@ -503,7 +508,7 @@ class TTFParser extends FileHandler
             if ($glyph['length'] > 0) {
                 $this->seek($tableOffset + $glyph['offset']);
                 if ($this->readShort() < 0) {
-                    // Composite glyph
+                    // composite glyph
                     $this->skip(8); // xMin, yMin, xMax, yMax
                     $offset = 10;
                     $components = [];
@@ -511,21 +516,21 @@ class TTFParser extends FileHandler
                         $flags = $this->readUShort();
                         $index = $this->readUShort();
                         $components[$offset + 2] = $index;
-                        if ($this->isBitSet($flags, 1)) { // ARG_1_AND_2_ARE_WORDS
+                        if ($this->isBitSet($flags, 1)) { // arg 1 and arg 2 are words
                             $skip = 4;
                         } else {
                             $skip = 2;
                         }
-                        if ($this->isBitSet($flags, 8)) { // WE_HAVE_A_SCALE
+                        if ($this->isBitSet($flags, 8)) { // scale present
                             $skip += 2;
-                        } elseif ($this->isBitSet($flags, 64)) { // WE_HAVE_AN_X_AND_Y_SCALE
+                        } elseif ($this->isBitSet($flags, 64)) { // x and y scale
                             $skip += 4;
-                        } elseif ($this->isBitSet($flags, 128)) { // WE_HAVE_A_TWO_BY_TWO
+                        } elseif ($this->isBitSet($flags, 128)) { // two by two
                             $skip += 8;
                         }
                         $this->skip($skip);
                         $offset += 2 * 2 + $skip;
-                    } while ($flags & 32); // MORE COMPONENTS
+                    } while ($flags & 32); // more components
                     $glyph['components'] = $components;
                 }
             }
@@ -703,7 +708,7 @@ class TTFParser extends FileHandler
         $this->skip(6); // xAvgCharWidth, usWeightClass, usWidthClass
         $fsType = $this->readUShort();
         $this->embeddable = (2 !== $fsType) && ($fsType & 0x200) === 0;
-        $this->skip(52); // 11 * 2 + 10 + 4 * 4 + 4
+        $this->skip(52);
         $fsSelection = $this->readUShort();
         $this->bold = ($fsSelection & 32) !== 0;
         $this->skip(4); // usFirstCharIndex, usLastCharIndex
@@ -725,7 +730,7 @@ class TTFParser extends FileHandler
         $this->seekTag('post');
         $version = $this->readULong();
         $this->italicAngle = $this->readShort();
-        $this->skip(2); // Skip decimal part
+        $this->skip(2); // skip decimal part
         $this->underlinePosition = $this->readShort();
         $this->underlineThickness = $this->readShort();
         $this->isFixedPitch = (0 !== $this->readULong());
@@ -734,7 +739,7 @@ class TTFParser extends FileHandler
             return;
         }
 
-        // Extract glyph names
+        // extract glyph names
         $this->glyphNames = true;
         $this->skip(18); // min/max usage, numberOfGlyphs, numberOfGlyphs
 

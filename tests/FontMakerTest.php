@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace fpdf\Tests;
 
-use fpdf\FileHandler;
 use fpdf\FontMaker;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
@@ -46,11 +45,11 @@ class FontMakerTest extends TestCase
         $this->compareFont($name);
     }
 
-    public function testFileHandlerNotFound(): void
+    public function testEmbedNotSubset(): void
     {
-        $this->expectException(MakeFontException::class);
-        self::expectExceptionMessage('Unable to open file: fake.txt.');
-        new FileHandler('fake.txt');
+        $name = 'helvetica_no_subset';
+        $this->generateFont(name: $name, subset: false);
+        $this->compareFont($name);
     }
 
     public function testFontType1(): void
@@ -70,7 +69,7 @@ class FontMakerTest extends TestCase
     public function testHelvetica1258(): void
     {
         $name = 'helvetica1258';
-        $this->generateFont(name: $name, embed: false, encoding: 'cp1258');
+        $this->generateFont(name: $name, encoding: 'cp1258', embed: false);
         $this->compareFont($name);
     }
 
@@ -144,13 +143,14 @@ class FontMakerTest extends TestCase
 
     private function generateFont(
         string $name,
-        bool $embed = true,
         string $ext = 'ttf',
-        string $encoding = FontMaker::DEFAULT_ENCODING
+        string $encoding = FontMaker::DEFAULT_ENCODING,
+        bool $embed = true,
+        bool $subset = true
     ): void {
         $fontFile = $this->fonts . $name . '.' . $ext;
         $fontMaker = new FontMaker();
-        $fontMaker->makeFont(fontFile: $fontFile, encoding: $encoding, embed: $embed);
+        $fontMaker->makeFont(fontFile: $fontFile, encoding: $encoding, embed: $embed, subset: $subset);
     }
 
     /**
