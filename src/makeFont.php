@@ -13,19 +13,29 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-$name = \basename(__FILE__, '.php');
-
 if (\PHP_VERSION_ID < 80200) { // @phpstan-ignore smaller.alwaysFalse
-    echo "Error: $name requires PHP 8.2 or newer.";
+    echo 'Error: makeFont requires PHP 8.2 or newer.';
     exit(1);
 }
 
-//if (\is_file(__DIR__ . '/../vendor/autoload.php')) {
-//    require __DIR__ . '/../vendor/autoload.php';
-//}
+if (\is_file(__DIR__ . '/../vendor/autoload.php')) {
+    require __DIR__ . '/../vendor/autoload.php';
+}
 
 if (1 === $argc) {
-    echo "Usage: php $name fontFile [encoding] [embed] [subset]\n";
+    $help = <<<HELP
+            makeFont v1.0.0
+            ---------------
+            Usage:
+                php makeFont fontFile [encoding [embed [subset]]]
+
+            Options:
+                fontFile  The path to the '.ttf', '.otf' or '.pfb' file.
+                encoding  The name of the encoding to use. The default value is 'cp1252'.
+                embed     Whether to embed the font or not. The default value is 'true'.
+                subset    Whether to subset the font or not. The default value is 'true'.
+        HELP;
+    echo $help;
 
     return;
 }

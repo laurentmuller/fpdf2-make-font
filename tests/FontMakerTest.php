@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace fpdf\Tests;
 
+use fpdf\FileHandler;
 use fpdf\FontMaker;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
@@ -43,6 +44,13 @@ class FontMakerTest extends TestCase
         $name = 'ComicNeue-BoldItalic';
         $this->generateFont($name);
         $this->compareFont($name);
+    }
+
+    public function testFileHandlerNotFound(): void
+    {
+        $this->expectException(MakeFontException::class);
+        self::expectExceptionMessage('Unable to open file: fake.txt.');
+        new FileHandler('fake.txt');
     }
 
     public function testFontType1(): void
