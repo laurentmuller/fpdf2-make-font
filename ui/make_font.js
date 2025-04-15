@@ -33,26 +33,26 @@
 
     const showActiveTheme = (theme, focus = false) => {
         const themeSwitcher = document.querySelector('#bd-theme')
-
         if (!themeSwitcher) {
             return
         }
 
-        const themeSwitcherText = document.querySelector('#bd-theme-text')
-        const activeThemeIcon = document.querySelector('.theme-icon-active use')
-        const btnToActive = document.querySelector(`[data-bs-theme-value="${theme}"]`)
-        const svgOfActiveBtn = btnToActive.querySelector('svg use').getAttribute('href')
-
-        document.querySelectorAll('[data-bs-theme-value]').forEach(element => {
+        document.querySelectorAll('[data-theme]').forEach(element => {
             element.classList.remove('active')
             element.setAttribute('aria-pressed', 'false')
         })
 
-        btnToActive.classList.add('active')
-        btnToActive.setAttribute('aria-pressed', 'true')
-        activeThemeIcon.setAttribute('href', svgOfActiveBtn)
-        const themeSwitcherLabel = `${themeSwitcherText.textContent} (${btnToActive.dataset.bsThemeValue})`
-        themeSwitcher.setAttribute('aria-label', themeSwitcherLabel)
+        const selection = document.querySelector(`[data-theme="${theme}"]`)
+        const selectionIcon = selection.querySelector('.theme-icon')
+        const selectionText = selection.querySelector('.theme-text')
+        selection.classList.add('active')
+        selection.setAttribute('aria-pressed', 'true')
+
+        const activeThemeIcon = themeSwitcher.querySelector('.theme-icon')
+        const activeThemeText = themeSwitcher.querySelector('.theme-text')
+        activeThemeText.textContent = selectionText.textContent
+        activeThemeIcon.setAttribute('class', selectionIcon.getAttribute('class'));
+        themeSwitcher.setAttribute('aria-label', selectionText.textContent)
 
         if (focus) {
             themeSwitcher.focus()
@@ -68,13 +68,57 @@
 
     window.addEventListener('DOMContentLoaded', () => {
         showActiveTheme(getPreferredTheme())
-        document.querySelectorAll('[data-bs-theme-value]').forEach(toggle => {
+        document.querySelectorAll('[data-theme]').forEach(toggle => {
             toggle.addEventListener('click', () => {
-                const theme = toggle.getAttribute('data-bs-theme-value')
+                const theme = toggle.getAttribute('data-theme')
                 setStoredTheme(theme)
                 setTheme(theme)
                 showActiveTheme(theme, true)
             })
         })
     })
+
+    const form = document.getElementById('make-font')
+    form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+        }
+        form.classList.add('was-validated')
+    }, false)
+
+    /** @type {HTMLButtonElement} */
+    const reset = document.querySelector('.btn-erase')
+    reset.addEventListener('click', event => {
+        form.reset()
+    })
+
+    const encoding = document.getElementById('encoding');
+    encoding.addEventListener('change', () => {
+        localStorage.setItem('encoding', encoding.value);
+    })
+    /** @type {HTMLInputElement} */
+    const embed = document.getElementById('embed');
+    embed.addEventListener('click', () => {
+        localStorage.setItem('embed', JSON.stringify(embed.checked))
+    })
+    /** @type {HTMLInputElement} */
+    const subset = document.getElementById('subset');
+    subset.addEventListener('click', () => {
+        localStorage.setItem('subset', JSON.stringify(subset.checked))
+    })
+
+    let value;
+    value = localStorage.getItem('encoding');
+    if (value) {
+        encoding.value = value
+    }
+    value = localStorage.getItem('embed')
+    if (value) {
+        embed.checked = JSON.parse(value)
+    }
+    value = localStorage.getItem('subset')
+    if (value) {
+        subset.checked = JSON.parse(value)
+    }
 })()

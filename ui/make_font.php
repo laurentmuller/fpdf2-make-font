@@ -12,6 +12,7 @@
 declare(strict_types=1);
 
 use fpdf\FontMaker;
+use fpdf\MakeFontException;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -72,9 +73,9 @@ function getFontFile(): array
     return $_FILES['fontFile'];
 }
 
-function removeFile(string $file): string
+function removeFile(?string $file): string
 {
-    if (\is_file($file) && !\unlink($file)) {
+    if (null !== $file && \is_file($file) && !\unlink($file)) {
         throw new RuntimeException("Unable to remove existing file: $file.");
     }
 
@@ -93,14 +94,24 @@ if (!\move_uploaded_file($source, $target)) {
     throw new RuntimeException("Unable to copy the font file: $name.");
 }
 
+$zipFile = null;
 $baseName = \substr(\basename($target), 0, -3);
 $phpFile = removeFile($baseName . 'php');
 $compressedFile = removeFile($baseName . 'z');
 
-$maker = new FontMaker();
-$maker->makeFont($target, $encoding, $embed, $subset);
-if (\file_exists($compressedFile)) {
-    $zipFile = $baseName . 'zip';
-    $phpFile = createZipFile($zipFile, $phpFile, $compressedFile);
+try {
+    $maker = new FontMaker();
+    $maker->makeFont($target, $encoding, $embed, $subset);
+    if (\file_exists($compressedFile)) {
+        $zipFile = $baseName . 'zip';
+        createZipFile($zipFile, $phpFile, $compressedFile);
+    }
+    sendFile($zipFile ?? $phpFile);
+} catch (MakeFontException $e) {
+    echo $e->getMessage();
+} finally {
+    removeFile($target);
+    removeFile($zipFile);
+    removeFile($phpFile);
+    removeFile($compressedFile);
 }
-sendFile($phpFile);

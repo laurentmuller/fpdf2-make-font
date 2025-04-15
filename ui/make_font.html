@@ -7,20 +7,19 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
     <link href="make_font.css" rel="stylesheet" crossorigin="anonymous"></link>
+    <script src="https://kit.fontawesome.com/6a9ba3897a.js" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="container">
     <div class="row">
         <div class="col-md-6 offset-md-3">
-            <h1 class="mt-3">FPDF2 Make Font</h1>
-            <form method="POST" action="make_font.php" enctype="multipart/form-data">
+            <h1 class="border-bottom pb-2 mt-3">FPDF2 Make Font</h1>
+            <form id="make-font" name="make-font" method="POST" action="make_font.php" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <div class="mb-3">
                     <label for="fontFile" class="form-label">Font file</label>
                     <input class="form-control" type="file" name="fontFile" id="fontFile" accept=".ttf,.otf,.pfb"
                            required>
-                    <div class="form-text"> The extension must be either .ttf, .otf or .pfb and determines the
-                        font type.
-                    </div>
+                    <div class="form-text"> The extension must be either .ttf, .otf or .pfb and determines the font type.</div>
                 </div>
                 <div class="mb-3">
                     <label for="encoding" class="form-label">Encoding</label>
@@ -46,9 +45,7 @@
                         <option value="KOI8-R">KOI8-R (Russian)</option>
                         <option value="KOI8-U">KOI8-U (Ukrainian)</option>
                     </select>
-                    <div id="encoding_help" class="form-text">The encoding defines the association between a code
-                        (from 0 to 255) and a character.
-                    </div>
+                    <div id="encoding_help" class="form-text">The encoding defines the association between a code (from 0 to 255) and a character.</div>
                 </div>
                 <div class="mb-3">
                     <div class="form-check form-switch">
@@ -62,66 +59,55 @@
                         <input class="form-check-input" type="checkbox" role="switch" id="subset" name="subset" checked>
                         <label class="form-check-label" for="subset">Subset</label>
                     </div>
-                    <div class="form-text">Indicates whether sub-setting should be used, that is to say, whether
-                        only the characters from the selected encoding should be kept in the embedded font.
-                    </div>
+                    <div class="form-text">Indicates whether sub-setting should be used, that is to say, whether only the characters from the selected encoding should be kept in the embedded font.</div>
                 </div>
                 <hr>
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" style="min-width: 130px;">Generate</button>
-                    <a href="https://github.com/laurentmuller/fpdf2-make-font" target="_blank" class="btn btn-secondary"
-                       style="min-width: 130px;">GitHub</a>
+                    <button type="submit" class="btn btn-form btn-primary">
+                        <i class="fa-solid fa-pen-nib me-2"></i>Generate
+                    </button>
+                    <button type="button" class="btn btn-form btn-secondary btn-erase">
+                        <i class="fa-solid fa-eraser me-2"></i>Reset
+                    </button>
+                    <a href="https://github.com/laurentmuller/fpdf2-make-font" target="_blank" class="btn btn-form btn-dark border">
+                        <i class="fa-brands fa-github me-2"></i>GitHub
+                    </a>
                 </div>
             </form>
         </div>
     </div>
-
-    <div class="position-absolute top-0 end-0 mt-1 me-1">
-        <button class="btn btn-link px-0 px-lg-2 py-2 dropdown-toggle d-flex align-items-center text-body" title="Switch Theme"
-                id="bd-theme" type="button" aria-expanded="true" data-bs-toggle="dropdown" data-bs-display="static">
-            <svg class="bi my-1 theme-icon-active" aria-hidden="true"><use href="#sun-fill"></use></svg>
-            <span class="d-lg-none ms-2" id="bd-theme-text">Toggle theme</span>
+    <!-- Theme switcher -->
+    <div class="position-absolute top-0 end-0 mt-2 me-2">
+        <button  id="bd-theme"  type="button" class="btn btn-link p-2 dropdown-toggle text-body text-decoration-none" title="Switch Theme"
+               aria-expanded="false" aria-label="" data-bs-toggle="dropdown">
+            <i class="theme-icon fa-solid fa-circle-half-stroke"></i>
+            <span class="theme-text d-lg-none ms-2">Auto</span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text" data-bs-popper="static">
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
             <li>
-                <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="light" aria-pressed="true">
-                    <svg class="bi me-2 opacity-50" aria-hidden="true"><use href="#sun-fill"></use></svg>
-                    Light
-                    <svg class="bi ms-auto d-none" aria-hidden="true"><use href="#check2"></use></svg>
+                <button type="button" class="dropdown-item d-flex align-items-center" data-theme="light" aria-pressed="false">
+                    <i class="theme-icon fa-solid fa-sun"></i>
+                    <span class="theme-text ms-2">Light</span>
+                    <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>
             </li>
             <li>
-                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
-                    <svg class="bi me-2 opacity-50" aria-hidden="true"><use href="#moon-stars-fill"></use></svg>
-                    Dark
-                    <svg class="bi ms-auto d-none" aria-hidden="true"><use href="#check2"></use></svg>
+                <button type="button" class="dropdown-item d-flex align-items-center" data-theme="dark" aria-pressed="false">
+                    <i class="theme-icon fa-solid fa-moon"></i>
+                    <span class="theme-text ms-2">Dark</span>
+                    <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>
             </li>
             <li>
-                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="false">
-                    <svg class="bi me-2 opacity-50" aria-hidden="true"><use href="#circle-half"></use></svg>
-                    Auto
-                    <svg class="bi ms-auto d-none" aria-hidden="true"><use href="#check2"></use></svg>
+                <button type="button" class="dropdown-item d-flex align-items-center" data-theme="auto" aria-pressed="false">
+                    <i class="theme-icon fa-solid fa-circle-half-stroke"></i>
+                    <span class="theme-text ms-2">Auto</span>
+                    <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>
             </li>
         </ul>
     </div>
 </div>
-<svg xmlns="http://www.w3.org/2000/svg" class="d-none">
-    <symbol id="sun-fill" viewBox="0 0 16 16">
-        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"></path>
-    </symbol>
-    <symbol id="moon-stars-fill" viewBox="0 0 16 16">
-        <path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"></path>
-        <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.734 1.734 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.734 1.734 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.734 1.734 0 0 0 1.097-1.097l.387-1.162zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.156 1.156 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.156 1.156 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732L13.863.1z"></path>
-    </symbol>
-    <symbol id="circle-half" viewBox="0 0 16 16">
-        <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"></path>
-    </symbol>
-    <symbol id="check2" viewBox="0 0 16 16">
-        <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"></path>
-    </symbol>
-</svg>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq"
         crossorigin="anonymous"></script>

@@ -4,3 +4,11 @@
     vertical-align: -.125em;
     fill: currentcolor;
 }
+
+.btn-form {
+    min-width: 130px;
+}
+
+[data-theme]:not(.active) .theme-check {
+    display: none;
+}
