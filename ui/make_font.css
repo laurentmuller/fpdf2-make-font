@@ -1,14 +1,16 @@
-.bi {
-    width: 1em;
-    height: 1em;
-    vertical-align: -.125em;
-    fill: currentcolor;
-}
-
 .btn-form {
     min-width: 130px;
 }
 
 [data-theme]:not(.active) .theme-check {
     display: none;
+}
+
+.form-help.form-text {
+    cursor: default;
+}
+
+html[data-bs-theme=dark] .btn.btn-dark {
+    border: 1px solid #495057
+    /* border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color); */
 }

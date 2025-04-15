@@ -4,9 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FPDF2 Make Font</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
-          integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
-    <link href="make_font.css" rel="stylesheet" crossorigin="anonymous"></link>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"
+          rel="stylesheet" crossorigin="anonymous"
+          integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7">
+    <link href="make_font.css" rel="stylesheet" crossorigin="anonymous">
     <script src="https://kit.fontawesome.com/6a9ba3897a.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -17,9 +18,15 @@
             <form id="make-font" name="make-font" method="POST" action="make_font.php" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <div class="mb-3">
                     <label for="fontFile" class="form-label">Font file</label>
-                    <input class="form-control" type="file" name="fontFile" id="fontFile" accept=".ttf,.otf,.pfb"
-                           required>
-                    <div class="form-text"> The extension must be either .ttf, .otf or .pfb and determines the font type.</div>
+                    <input class="form-control" type="file" name="fontFile" id="fontFile" accept=".ttf,.otf,.pfb" required>
+                    <div class="form-help form-text">The extension must be either .ttf, .otf or .pfb and determines the font type.</div>
+                    <div class="invalid-feedback">A font file must be selected.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="afmFile" class="form-label">AFM file</label>
+                    <input class="form-control" type="file" name="afmFile" id="afmFile" accept=".afm" disabled>
+                    <div class="form-help form-text">The file that contains font metric information for a Type 1 PostScript font.</div>
+                    <div class="invalid-feedback">A AFM file must be selected.</div>
                 </div>
                 <div class="mb-3">
                     <label for="encoding" class="form-label">Encoding</label>
@@ -45,31 +52,31 @@
                         <option value="KOI8-R">KOI8-R (Russian)</option>
                         <option value="KOI8-U">KOI8-U (Ukrainian)</option>
                     </select>
-                    <div id="encoding_help" class="form-text">The encoding defines the association between a code (from 0 to 255) and a character.</div>
+                    <div id="encoding_help" class="form-help form-text">The encoding defines the association between a code (from 0 to 255) and a character.</div>
                 </div>
                 <div class="mb-3">
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="embed" name="embed" checked>
                         <label class="form-check-label" for="embed">Embed</label>
                     </div>
-                    <div class="form-text">Indicates whether the font should be embedded in the PDF or not.</div>
+                    <div class="form-help form-text">Indicates whether the font should be embedded in the PDF document.</div>
                 </div>
                 <div class="mb-3">
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" role="switch" id="subset" name="subset" checked>
                         <label class="form-check-label" for="subset">Subset</label>
                     </div>
-                    <div class="form-text">Indicates whether sub-setting should be used, that is to say, whether only the characters from the selected encoding should be kept in the embedded font.</div>
+                    <div class="form-help form-text">Indicates whether sub-setting characters should be used.</div>
                 </div>
                 <hr>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-form btn-primary">
-                        <i class="fa-solid fa-pen-nib me-2"></i>Generate
+                        <i class="fa-solid fa-pen-to-square me-2"></i>Generate
                     </button>
                     <button type="button" class="btn btn-form btn-secondary btn-erase">
                         <i class="fa-solid fa-eraser me-2"></i>Reset
                     </button>
-                    <a href="https://github.com/laurentmuller/fpdf2-make-font" target="_blank" class="btn btn-form btn-dark border">
+                    <a href="https://github.com/laurentmuller/fpdf2-make-font" target="_blank" class="btn btn-form btn-dark ms-auto">
                         <i class="fa-brands fa-github me-2"></i>GitHub
                     </a>
                 </div>
@@ -78,29 +85,29 @@
     </div>
     <!-- Theme switcher -->
     <div class="position-absolute top-0 end-0 mt-2 me-2">
-        <button  id="bd-theme"  type="button" class="btn btn-link p-2 dropdown-toggle text-body text-decoration-none" title="Switch Theme"
-               aria-expanded="false" aria-label="" data-bs-toggle="dropdown">
-            <i class="theme-icon fa-solid fa-circle-half-stroke"></i>
-            <span class="theme-text d-lg-none ms-2">Auto</span>
+        <button id="theme-switcher" type="button" class="btn btn-link p-2 dropdown-toggle  d-flex align-items-center text-body text-decoration-none" title="Toggle theme"
+               aria-expanded="false" aria-label="Auto" data-bs-toggle="dropdown">
+            <i class="theme-icon fa-solid fa-fw fa-circle-half-stroke"></i>
+            <span class="theme-text d-none d-xxl-block ms-1">Auto</span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
+        <ul class="dropdown-menu dropdown-menu-end">
             <li>
                 <button type="button" class="dropdown-item d-flex align-items-center" data-theme="light" aria-pressed="false">
-                    <i class="theme-icon fa-solid fa-sun"></i>
+                    <i class="theme-icon fa-fw fa-solid fa-sun"></i>
                     <span class="theme-text ms-2">Light</span>
                     <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>
             </li>
             <li>
                 <button type="button" class="dropdown-item d-flex align-items-center" data-theme="dark" aria-pressed="false">
-                    <i class="theme-icon fa-solid fa-moon"></i>
+                    <i class="theme-icon fa-fw fa-solid fa-moon"></i>
                     <span class="theme-text ms-2">Dark</span>
                     <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>
             </li>
             <li>
                 <button type="button" class="dropdown-item d-flex align-items-center" data-theme="auto" aria-pressed="false">
-                    <i class="theme-icon fa-solid fa-circle-half-stroke"></i>
+                    <i class="theme-icon fa-fw fa-solid fa-circle-half-stroke"></i>
                     <span class="theme-text ms-2">Auto</span>
                     <i class="theme-check ms-auto fa-solid fa-check"></i>
                 </button>

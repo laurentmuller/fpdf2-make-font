@@ -119,7 +119,7 @@ class TTFParser extends FileHandler
     private function addGlyph(int $id): void
     {
         if (0 === $this->glyphs[$id]['ssid']) {
-            $this->glyphs[$id]['ssid'] = \count($this->subsettedGlyphs);
+            $this->glyphs[$id]['ssid'] = $this->getSubsettedGlyphsCount();
             $this->subsettedGlyphs[] = $id;
             if (isset($this->glyphs[$id]['components'])) {
                 foreach ($this->glyphs[$id]['components'] as $cid) {
@@ -138,17 +138,17 @@ class TTFParser extends FileHandler
         // divide charset in contiguous segments
         $segments = $this->buildCmapSegments();
         [$startCount, $endCount, $idDelta, $idRangeOffset, $glyphIdArray] = $this->buildCmapFormat($segments);
-        $segCount = \count($segments);
+        $segmentsCount = \count($segments);
 
         $entrySelector = 0;
-        $n = $segCount;
+        $n = $segmentsCount;
         while (1 !== $n) {
             $n >>= 1;
             ++$entrySelector;
         }
         $searchRange = (1 << $entrySelector) * 2;
-        $rangeShift = 2 * $segCount - $searchRange;
-        $cmap = \pack('nnnn', 2 * $segCount, $searchRange, $entrySelector, $rangeShift);
+        $rangeShift = 2 * $segmentsCount - $searchRange;
+        $cmap = \pack('nnnn', 2 * $segmentsCount, $searchRange, $entrySelector, $rangeShift);
         foreach ($endCount as $value) {
             $cmap .= \pack('n', $value);
         }
@@ -188,15 +188,15 @@ class TTFParser extends FileHandler
         $idDelta = [];
         $idRangeOffset = [];
         $glyphIdArray = '';
-        $count = \count($segments);
-        for ($i = 0; $i < $count; ++$i) {
+        $segmentsCount = \count($segments);
+        for ($i = 0; $i < $segmentsCount; ++$i) {
             [$start, $end] = $segments[$i];
             $startCount[] = $start;
             $endCount[] = $end;
             if ($start !== $end) {
                 // segment with multiple chars
                 $idDelta[] = 0;
-                $idRangeOffset[] = \strlen($glyphIdArray) + ($count - $i) * 2;
+                $idRangeOffset[] = \strlen($glyphIdArray) + ($segmentsCount - $i) * 2;
                 for ($c = $start; $c <= $end; ++$c) {
                     $ssid = $this->glyphs[$this->chars[$c]]['ssid'];
                     $glyphIdArray .= \pack('n', $ssid);
@@ -227,7 +227,7 @@ class TTFParser extends FileHandler
         \sort($chars);
         $segments = [];
         $segment = [$chars[0], $chars[0]];
-        for ($i = 1, $counter = \count($chars); $i < $counter; ++$i) {
+        for ($i = 1, $charsCount = \count($chars); $i < $charsCount; ++$i) {
             if ($chars[$i] > $segment[1] + 1) {
                 $segments[] = $segment;
                 $segment = [$chars[$i], $chars[$i]];
@@ -249,8 +249,8 @@ class TTFParser extends FileHandler
                 $tags[] = $tag;
             }
         }
-        $numTables = \count($tags);
-        $offset = 12 + 16 * $numTables;
+        $tagsCount = \count($tags);
+        $offset = 12 + 16 * $tagsCount;
         foreach ($tags as $tag) {
             if ('' === $this->tables[$tag]['data']) {
                 $this->loadTable($tag);
@@ -261,14 +261,14 @@ class TTFParser extends FileHandler
 
         // build offset table
         $entrySelector = 0;
-        $n = $numTables;
+        $n = $tagsCount;
         while (1 !== $n) {
             $n >>= 1;
             ++$entrySelector;
         }
         $searchRange = 16 * (1 << $entrySelector);
-        $rangeShift = 16 * $numTables - $searchRange;
-        $offsetTable = \pack('nnnnnn', 1, 0, $numTables, $searchRange, $entrySelector, $rangeShift);
+        $rangeShift = 16 * $tagsCount - $searchRange;
+        $offsetTable = \pack('nnnnnn', 1, 0, $tagsCount, $searchRange, $entrySelector, $rangeShift);
         foreach ($tags as $tag) {
             $table = $this->tables[$tag];
             $offsetTable .= $tag . $table['checkSum'] . \pack('NN', $table['offset'], $table['length']);
@@ -317,8 +317,8 @@ class TTFParser extends FileHandler
     private function buildHhea(): void
     {
         $this->loadTable('hhea');
-        $numberOfHMetrics = \count($this->subsettedGlyphs);
-        $data = \substr_replace($this->tables['hhea']['data'], \pack('n', $numberOfHMetrics), 4 + 15 * 2, 2);
+        $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
+        $data = \substr_replace($this->tables['hhea']['data'], \pack('n', $subsettedGlyphsCount), 4 + 15 * 2, 2);
         $this->setTable('hhea', $data);
     }
 
@@ -336,27 +336,22 @@ class TTFParser extends FileHandler
     {
         $data = '';
         $offset = 0;
+        $callback = 0 === $this->indexToLocFormat
+            ? static fn (int $offset): string => \pack('n', $offset / 2)
+            : static fn (int $offset): string => \pack('N', $offset);
         foreach ($this->subsettedGlyphs as $id) {
-            if (0 === $this->indexToLocFormat) {
-                $data .= \pack('n', $offset / 2);
-            } else {
-                $data .= \pack('N', $offset);
-            }
+            $data .= $callback($offset);
             $offset += $this->glyphs[$id]['length'];
         }
-        if (0 === $this->indexToLocFormat) {
-            $data .= \pack('n', $offset / 2);
-        } else {
-            $data .= \pack('N', $offset);
-        }
+        $data .= $callback($offset);
         $this->setTable('loca', $data);
     }
 
     private function buildMaxp(): void
     {
         $this->loadTable('maxp');
-        $numGlyphs = \count($this->subsettedGlyphs);
-        $data = \substr_replace($this->tables['maxp']['data'], \pack('n', $numGlyphs), 4, 2);
+        $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
+        $data = \substr_replace($this->tables['maxp']['data'], \pack('n', $subsettedGlyphsCount), 4, 2);
         $this->setTable('maxp', $data);
     }
 
@@ -365,11 +360,11 @@ class TTFParser extends FileHandler
         $this->seekTag('post');
         if ($this->glyphNames) {
             // version 2.0
-            $numberOfGlyphs = \count($this->subsettedGlyphs);
+            $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
             $numNames = 0;
             $names = '';
             $data = $this->read(32);
-            $data .= \pack('n', $numberOfGlyphs);
+            $data .= \pack('n', $subsettedGlyphsCount);
             foreach ($this->subsettedGlyphs as $id) {
                 $name = $this->glyphs[$id]['name'];
                 if (\is_string($name)) {
@@ -394,13 +389,17 @@ class TTFParser extends FileHandler
     {
         $high = 0;
         $low = 0;
-        $length = \strlen($str);
-        for ($i = 0; $i < $length; $i += 4) {
+        for ($i = 0, $len = \strlen($str); $i < $len; $i += 4) {
             $high += (\ord($str[$i]) << 8) + \ord($str[$i + 1]);
             $low += (\ord($str[$i + 2]) << 8) + \ord($str[$i + 3]);
         }
 
         return \pack('nn', $high + ($low >> 16), $low);
+    }
+
+    private function getSubsettedGlyphsCount(): int
+    {
+        return \count($this->subsettedGlyphs);
     }
 
     private function isBitSet(int $value, int $mask): bool
@@ -608,18 +607,15 @@ class TTFParser extends FileHandler
     private function parseLoca(): void
     {
         $this->seekTag('loca');
+
         $offsets = [];
-        if (0 === $this->indexToLocFormat) {
-            // short format
-            for ($i = 0; $i <= $this->numGlyphs; ++$i) {
-                $offsets[] = 2 * $this->readUShort();
-            }
-        } else {
-            // long format
-            for ($i = 0; $i <= $this->numGlyphs; ++$i) {
-                $offsets[] = $this->readULong();
-            }
+        $callback = 0 === $this->indexToLocFormat
+            ? fn (): int => 2 * $this->readUShort()  // short format
+            : fn (): int => $this->readULong(); // long format
+        for ($i = 0; $i <= $this->numGlyphs; ++$i) {
+            $offsets[] = $callback();
         }
+
         for ($i = 0; $i < $this->numGlyphs; ++$i) {
             $this->glyphs[$i] = \array_merge(
                 $this->glyphs[$i],
@@ -744,16 +740,16 @@ class TTFParser extends FileHandler
         $this->skip(18); // min/max usage, numberOfGlyphs, numberOfGlyphs
 
         $names = [];
-        $numNames = 0;
+        $namesCount = 0;
         $glyphNameIndex = [];
         for ($i = 0; $i < $this->numGlyphs; ++$i) {
             $index = $this->readUShort();
             $glyphNameIndex[] = $index;
-            if ($index >= 258 && $index - 257 > $numNames) {
-                $numNames = $index - 257;
+            if ($index >= 258 && $index - 257 > $namesCount) {
+                $namesCount = $index - 257;
             }
         }
-        for ($i = 0; $i < $numNames; ++$i) {
+        for ($i = 0; $i < $namesCount; ++$i) {
             $len = \ord($this->read(1));
             $names[] = $this->read($len);
         }

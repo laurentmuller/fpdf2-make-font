@@ -132,6 +132,20 @@ class FontMakerTest extends TestCase
         $this->compareFont($name);
     }
 
+    public function testRussian(): void
+    {
+        $name = 'russian';
+        $this->generateFont(name: $name, ext: 'otf', encoding: 'KOI8-R');
+        $this->compareFont($name);
+    }
+
+    public function testThai(): void
+    {
+        $name = 'thai';
+        $this->generateFont(name: $name, encoding: 'cp874');
+        $this->compareFont($name);
+    }
+
     private function compareFont(string $name): void
     {
         $sourceFile = $this->sources . $name . '.php';
