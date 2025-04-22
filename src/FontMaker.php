@@ -44,6 +44,8 @@ class FontMaker
      */
     public const DEFAULT_ENCODING = 'cp1252';
 
+    private const FONT_TRUE_TYPE = 'TrueType';
+    private const FONT_TYPE_1 = 'Type1';
     private const NOT_DEF = '.notdef';
 
     public function makeFont(
@@ -58,14 +60,14 @@ class FontMaker
 
         $ext = \strtolower(\substr($fontFile, -3));
         $type = match ($ext) {
-            'ttf', 'otf' => 'TrueType',
-            'pfb' => 'Type1',
+            'ttf', 'otf' => self::FONT_TRUE_TYPE,
+            'pfb' => self::FONT_TYPE_1,
             default => throw MakeFontException::format('Unrecognized font file extension: %s.', $ext),
         };
 
         $map = $this->loadMap($encoding);
         $info = match ($type) {
-            'TrueType' => $this->getInfoFromTrueType($fontFile, $embed, $map, $subset),
+            self::FONT_TRUE_TYPE => $this->getInfoFromTrueType($fontFile, $embed, $map, $subset),
             default => $this->getInfoFromType1($fontFile, $embed, $map)
         };
 
@@ -267,7 +269,7 @@ class FontMaker
 
         if ($embed) {
             $output .= '$file = \'' . $info['File'] . "';\n";
-            if ('Type1' === $type) {
+            if (self::FONT_TYPE_1 === $type) {
                 $output .= '$size1 = ' . $info['Size1'] . ";\n";
                 $output .= '$size2 = ' . $info['Size2'] . ";\n";
             } else {

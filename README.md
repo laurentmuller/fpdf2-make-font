@@ -148,9 +148,10 @@ $pdf->write(10, 'Enjoy new fonts with FPDF!');
 $pdf->output();
 ```
 
-**User interface:**
+## Symfony
 
-A small application has been created under the `ui` directory.
+A [Symfony application](https://github.com/laurentmuller/fpdf2-make-font-ui) has
+been created to generate fonts.
 
 ![User Interface](images/ui_light.png)
 
