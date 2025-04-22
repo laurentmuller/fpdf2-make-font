@@ -48,6 +48,37 @@ class FontMaker
     private const FONT_TYPE_1 = 'Type1';
     private const NOT_DEF = '.notdef';
 
+    /**
+     * Gets availaible encodings.
+     *
+     * @return array<string, string> an array with the encoding names and the encoding values
+     */
+    public static function getEncodings(): array
+    {
+        return [
+            'cp1250 (Central Europe)' => 'cp1250',
+            'cp1251 (Cyrillic)' => 'cp1251',
+            'cp1252 (Western Europe)' => 'cp1252',
+            'cp1253 (Greek)' => 'cp1253',
+            'cp1254 (Turkish)' => 'cp1254',
+            'cp1255 (Hebrew)' => 'cp1255',
+            'cp1257 (Baltic)' => 'cp1257',
+            'cp1258 (Vietnamese)' => 'cp1258',
+            'cp874 (Thai)' => 'cp874',
+            'ISO-8859-1 (Western Europe)' => 'ISO-8859-1',
+            'ISO-8859-2 (Central Europe)' => 'ISO-8859-2',
+            'ISO-8859-4 (Baltic)' => 'ISO-8859-4',
+            'ISO-8859-5 (Cyrillic)' => 'ISO-8859-5',
+            'ISO-8859-7 (Greek)' => 'ISO-8859-7',
+            'ISO-8859-9 (Turkish)' => 'ISO-8859-9',
+            'ISO-8859-11 (Thai)' => 'ISO-8859-11',
+            'ISO-8859-15 (Western Europe)' => 'ISO-8859-15',
+            'ISO-8859-16 (Central Europe)' => 'ISO-8859-16',
+            'KOI8-R (Russian)' => 'KOI8-R',
+            'KOI8-U (Ukrainian)' => 'KOI8-U',
+        ];
+    }
+
     public function makeFont(
         string $fontFile,
         string $encoding = self::DEFAULT_ENCODING,
