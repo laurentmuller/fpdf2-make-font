@@ -52,11 +52,62 @@ class FontMakerTest extends TestCase
         $this->compareFont($name);
     }
 
+    public function testFixedPitch(): void
+    {
+        $name = 'FixedPitch';
+        $file = $this->generateFont(name: $name, ext: 'pfb');
+        self::assertFileExists($file);
+    }
+
     public function testFontType1(): void
     {
         $name = 'FontType1';
         $this->generateFont(name: $name, ext: 'pfb');
         $this->compareFont($name);
+    }
+
+    public function testFontType1AfmNotFound(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessageMatches('/AFM font file not found:.*afm_not_found.afm.$/');
+        $name = 'afm_not_found';
+        $this->generateFont(name: $name, ext: 'pfb');
+    }
+
+    public function testFontType1Empty(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessageMatches('/AFM font file empty or not readable.*empty.afm.$/');
+        $name = 'empty';
+        $this->generateFont(name: $name, ext: 'pfb');
+    }
+
+    public function testFontType1NoAscender(): void
+    {
+        $name = 'FontNoAscender';
+        $file = $this->generateFont(name: $name, ext: 'pfb');
+        self::assertFileExists($file);
+    }
+
+    public function testFontType1NoDescender(): void
+    {
+        $name = 'FontNoDescender';
+        $file = $this->generateFont(name: $name, ext: 'pfb');
+        self::assertFileExists($file);
+    }
+
+    public function testFontType1NoName(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('FontName missing in AFM file.');
+        $name = 'no_name';
+        $this->generateFont(name: $name, ext: 'pfb');
+    }
+
+    public function testGetEncodings(): void
+    {
+        $encodings = FontMaker::getEncodings();
+        self::assertContains(FontMaker::DEFAULT_ENCODING, $encodings);
     }
 
     public function testHelvetica(): void
@@ -100,6 +151,14 @@ class FontMakerTest extends TestCase
         $fontMaker->makeFont($fontFile);
     }
 
+    public function testInvalidMarker(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Font file is not a valid binary Type1.');
+        $name = 'invalid_marker';
+        $this->generateFont(name: $name, ext: 'pfb');
+    }
+
     public function testInvalidOttoFont(): void
     {
         self::expectException(MakeFontException::class);
@@ -116,6 +175,14 @@ class FontMakerTest extends TestCase
         $fontFile = $this->fonts . 'invalid_version.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
+    }
+
+    public function testNotEmbeddable(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Font license does not allow embedding.');
+        $name = 'not_embeddable';
+        $this->generateFont($name);
     }
 
     public function testRobotoRegular(): void
@@ -137,6 +204,13 @@ class FontMakerTest extends TestCase
         $name = 'russian';
         $this->generateFont(name: $name, ext: 'otf', encoding: 'KOI8-R');
         $this->compareFont($name);
+    }
+
+    public function testStdVW(): void
+    {
+        $name = 'StdVW';
+        $file = $this->generateFont(name: $name, ext: 'pfb');
+        self::assertFileExists($file);
     }
 
     public function testThai(): void
@@ -161,10 +235,12 @@ class FontMakerTest extends TestCase
         string $encoding = FontMaker::DEFAULT_ENCODING,
         bool $embed = true,
         bool $subset = true
-    ): void {
+    ): string {
         $fontFile = $this->fonts . $name . '.' . $ext;
         $fontMaker = new FontMaker();
         $fontMaker->makeFont(fontFile: $fontFile, encoding: $encoding, embed: $embed, subset: $subset);
+
+        return $fontFile;
     }
 
     /**

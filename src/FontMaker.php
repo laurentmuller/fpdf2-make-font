@@ -14,7 +14,7 @@ declare(strict_types=1);
 namespace fpdf;
 
 /**
- * @phpstan-type  FontInfoType = array{
+ * @phpstan-type FontInfoType = array{
  *     File: string,
  *     Data: string,
  *     OriginalSize: int,
@@ -49,7 +49,7 @@ class FontMaker
     private const NOT_DEF = '.notdef';
 
     /**
-     * Gets availaible encodings.
+     * Gets available encodings.
      *
      * @return array<string, string> an array with the encoding names and the encoding values
      */
@@ -104,17 +104,11 @@ class FontMaker
 
         $basename = \substr(\basename($fontFile), 0, -4);
         if ($embed) {
-            if (\function_exists('gzcompress')) {
-                $file = $basename . '.z';
-                $data = (string) \gzcompress($info['Data']);
-                $this->saveToFile($file, $data, 'b');
-                $info['File'] = $file;
-                $this->message('Font file compressed generated: ' . $file);
-            } else {
-                $subset = false;
-                $info['File'] = \basename($fontFile);
-                $this->warning('Font file could not be compressed (zlib extension not available)');
-            }
+            $file = $basename . '.z';
+            $data = (string) \gzcompress($info['Data']);
+            $this->saveToFile($file, $data, 'b');
+            $info['File'] = $file;
+            $this->message('Font file compressed generated: ' . $file);
         }
 
         $phpFile = $basename . '.php';
@@ -134,8 +128,6 @@ class FontMaker
             'Bold' => false,
             'ItalicAngle' => 0,
             'IsFixedPitch' => false,
-            'Ascender' => 0,
-            'Descender' => 0,
             'UnderlineThickness' => 0,
             'UnderlinePosition' => 0,
             'FontBBox' => [],
@@ -261,17 +253,15 @@ class FontMaker
             throw MakeFontException::format('Encoding not found: %s.', $encoding);
         }
 
-        $lines = \file($file, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
-        if (false === $lines || [] === $lines) {
-            throw MakeFontException::format('Encoding not found: %s.', $encoding);
-        }
+        /** @phpstan-var string[] $lines */
+        $lines = (array) \file($file, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
 
         $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
-            $values = \explode(' ', \rtrim($line));
+            $values = \explode(' ', $line);
             $key = (int) \hexdec(\substr($values[0], 1));
             $uv = (int) \hexdec(\substr($values[1], 2));
-            $name = $values[2];
+            $name = \rtrim($values[2]);
             $map[$key] = ['uv' => $uv, 'name' => $name];
         }
 
