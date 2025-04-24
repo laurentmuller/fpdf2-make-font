@@ -264,13 +264,14 @@ class FontMaker
         $font['Bold'] = isset($font['Weight']) && 1 === \preg_match('/bold|black/i', $font['Weight']);
         $font['MissingWidth'] = $cw[self::NOT_DEF] ?? 0;
         $widths = \array_fill(0, 256, $font['MissingWidth']);
-        foreach ($map as $c => $v) {
-            if (self::NOT_DEF !== $v['name']) {
-                if (isset($cw[$v['name']])) {
-                    $widths[$c] = $cw[$v['name']];
-                } else {
-                    $this->warning(\sprintf($this->trans('warning_character_missing'), $v['name']));
-                }
+        foreach ($map as $index => $value) {
+            if (self::NOT_DEF === $value['name']) {
+                continue;
+            }
+            if (isset($cw[$value['name']])) {
+                $widths[$index] = $cw[$value['name']];
+            } else {
+                $this->warning(\sprintf($this->trans('warning_character_missing'), $value['name']));
             }
         }
         $font['Widths'] = $widths;

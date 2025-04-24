@@ -17,18 +17,19 @@ class Translator
 {
     public const DEFAULT_LOCALE = 'en';
 
+    private string $locale = self::DEFAULT_LOCALE;
+
     /**
      * @var array<string, string>
      */
-    private readonly array $messages;
+    private array $messages;
 
-    public function __construct(private readonly string $locale = self::DEFAULT_LOCALE)
+    public function __construct(string $locale = self::DEFAULT_LOCALE)
     {
-        $messages = $this->loadFile(self::DEFAULT_LOCALE);
+        $this->messages = $this->loadFile(self::DEFAULT_LOCALE);
         if (self::DEFAULT_LOCALE !== $locale) {
-            $messages = \array_merge($messages, $this->loadFile($locale));
+            $this->merge($locale);
         }
-        $this->messages = $messages;
     }
 
     public function format(string $key, string|int ...$values): MakeFontException
@@ -56,12 +57,24 @@ class Translator
      */
     private function loadFile(string $locale): array
     {
-        $file = \sprintf('%s/i18n/%s.ini', __DIR__, \strtolower($locale));
+        $file = \sprintf('%s/i18n/%s.json', __DIR__, \strtolower($locale));
         if (!\file_exists($file)) {
             return [];
         }
 
+        $content = (string) \file_get_contents($file);
+
         /** @phpstan-var array<string, string> */
-        return (array) \parse_ini_file($file);
+        return \json_decode($content, true);
+    }
+
+    private function merge(string $locale): void
+    {
+        $custom = $this->loadFile($locale);
+        if ([] === $custom) {
+            return;
+        }
+        $this->messages = \array_merge($this->messages, $custom);
+        $this->locale = $locale;
     }
 }

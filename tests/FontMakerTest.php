@@ -56,9 +56,8 @@ class FontMakerTest extends TestCase
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Table not found: head.');
-        $fontFile = $this->fonts . 'empty_tables.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile);
+        $name = 'empty_tables';
+        $this->generateFont($name);
     }
 
     public function testFixedPitch(): void
@@ -137,9 +136,8 @@ class FontMakerTest extends TestCase
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessageMatches('/^File not found:.*fake.map.$/');
-        $fontFile = $this->fonts . 'times.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile, 'fake');
+        $name = 'times';
+        $this->generateFont(name: $name, encoding: 'fake');
     }
 
     public function testInvalidExtension(): void
@@ -164,9 +162,8 @@ class FontMakerTest extends TestCase
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Incorrect magic number: 0xFFFFFFFF.');
-        $fontFile = $this->fonts . 'invalid_magic_number.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile);
+        $name = 'invalid_magic_number';
+        $this->generateFont($name);
     }
 
     public function testInvalidMarker(): void
@@ -181,27 +178,32 @@ class FontMakerTest extends TestCase
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('OpenType font based on PostScript outlines is not supported.');
-        $fontFile = $this->fonts . 'otto_header.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile);
+        $name = 'otto_header';
+        $this->generateFont($name);
     }
 
     public function testInvalidPostScriptName(): void
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('PostScript name not found.');
-        $fontFile = $this->fonts . 'invalid_post_script_name.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile);
+        $name = 'invalid_post_script_name';
+        $this->generateFont($name);
+    }
+
+    public function testInvalidTableFormat(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Invalid table format: 255.');
+        $name = 'invalid_table_format';
+        $this->generateFont($name);
     }
 
     public function testInvalidVersion(): void
     {
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Unrecognized file version: 0xABCDEFFF.');
-        $fontFile = $this->fonts . 'invalid_version.ttf';
-        $fontMaker = new FontMaker();
-        $fontMaker->makeFont($fontFile);
+        $name = 'invalid_version';
+        $this->generateFont($name);
     }
 
     public function testLocale(): void
