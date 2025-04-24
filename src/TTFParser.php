@@ -46,7 +46,7 @@ class TTFParser extends FileHandler
     public int $typoDescender = 0;
     public int $underlinePosition = 0;
     public int $underlineThickness = 0;
-    public int $unitsPerEm = 1000;
+    public float $unitsPerEm = 1000.0;
     public int $xMax = 0;
     public int $xMin = 0;
     public int $yMax = 0;
@@ -102,7 +102,7 @@ class TTFParser extends FileHandler
 
     public function scale(float $value): int
     {
-        return (int) \round($value * 1000.0 / (float) $this->unitsPerEm);
+        return (int) \round($value * 1000.0 / $this->unitsPerEm);
     }
 
     /**

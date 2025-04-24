@@ -91,17 +91,11 @@ class FontMaker
         return $this->translator->getLocale();
     }
 
-    public function getTranslator(): Translator
-    {
-        return $this->translator;
-    }
-
     public function makeFont(
         string $fontFile,
         string $encoding = self::DEFAULT_ENCODING,
         bool $embed = true,
-        bool $subset = true,
-        string $locale = 'en'
+        bool $subset = true
     ): void {
         if (!\file_exists($fontFile)) {
             throw $this->translator->format('error_file_not_found', $fontFile);
@@ -127,12 +121,12 @@ class FontMaker
             $data = (string) \gzcompress($font['Data']);
             $this->saveToFile($compressedFile, $data, 'b');
             $font['File'] = $compressedFile;
-            $this->message('Font file compressed generated: ' . $compressedFile);
+            $this->message(\sprintf($this->trans('info_compressed_generated'), $compressedFile));
         }
 
         $phpFile = $baseName . '.php';
         $this->makeDefinitionFile($phpFile, $type, $encoding, $embed, $subset, $map, $font);
-        $this->message('Font file definition generated: ' . $phpFile);
+        $this->message(\sprintf($this->trans('info_file_generated'), $phpFile));
     }
 
     public function setLocale(string $locale = Translator::DEFAULT_LOCALE): void
@@ -235,7 +229,7 @@ class FontMaker
                 $width = $parser->glyphs[$id]['width'];
                 $widths[$index] = $parser->scale($width);
             } else {
-                $this->warning(\sprintf('Character %s is missing', $value['name']));
+                $this->warning(\sprintf($this->trans('warning_character_missing'), $value['name']));
             }
         }
         $font['Widths'] = $widths;
@@ -275,7 +269,7 @@ class FontMaker
                 if (isset($cw[$v['name']])) {
                     $widths[$c] = $cw[$v['name']];
                 } else {
-                    $this->warning(\sprintf('Character %s is missing', $v['name']));
+                    $this->warning(\sprintf($this->trans('warning_character_missing'), $v['name']));
                 }
             }
         }
@@ -489,12 +483,14 @@ class FontMaker
         return $output;
     }
 
-    private function message(string $message, string $severity = 'Info'): void
+    private function message(string $message, string $severity = 'info'): void
     {
+        $severity = $this->trans($severity);
+
         if (\PHP_SAPI === 'cli') {
-            echo "$severity: $message.\n";
+            echo "$severity: $message\n";
         } else {
-            echo "$severity: $message.<br>";
+            echo "$severity: $message<br>";
         }
     }
 
@@ -563,6 +559,11 @@ class FontMaker
         $handler->close();
     }
 
+    private function trans(string $key): string
+    {
+        return $this->translator->get($key);
+    }
+
     /**
      * @phpstan-param FontInfoType $font
      */
@@ -587,6 +588,6 @@ class FontMaker
 
     private function warning(string $message): void
     {
-        $this->message($message, 'Warning');
+        $this->message($message, 'warning');
     }
 }

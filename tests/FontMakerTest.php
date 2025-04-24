@@ -52,6 +52,15 @@ class FontMakerTest extends TestCase
         $this->compareFont($name);
     }
 
+    public function testEmptyTables(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Table not found: head.');
+        $fontFile = $this->fonts . 'empty_tables.ttf';
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
     public function testFixedPitch(): void
     {
         $name = 'FixedPitch';
@@ -135,18 +144,27 @@ class FontMakerTest extends TestCase
 
     public function testInvalidExtension(): void
     {
-        $fontFile = __FILE__;
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Unrecognized font file extension: php.');
+        $fontFile = __FILE__;
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
 
     public function testInvalidFontFile(): void
     {
-        $fontFile = 'fake.txt';
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('File not found: fake.txt.');
+        $fontFile = 'fake.txt';
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
+    public function testInvalidMagicNumber(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('Incorrect magic number: 0xFFFFFFFF.');
+        $fontFile = $this->fonts . 'invalid_magic_number.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
@@ -164,6 +182,15 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('OpenType font based on PostScript outlines is not supported.');
         $fontFile = $this->fonts . 'otto_header.ttf';
+        $fontMaker = new FontMaker();
+        $fontMaker->makeFont($fontFile);
+    }
+
+    public function testInvalidPostScriptName(): void
+    {
+        self::expectException(MakeFontException::class);
+        self::expectExceptionMessage('PostScript name not found.');
+        $fontFile = $this->fonts . 'invalid_post_script_name.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
