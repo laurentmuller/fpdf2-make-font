@@ -67,6 +67,11 @@ class TTFParser extends FileHandler
      *   checkSum: string}> */
     private array $tables = [];
 
+    public function __construct(string $file, private readonly Translator $translator = new Translator())
+    {
+        parent::__construct(file: $file, translator: $this->translator);
+    }
+
     public function build(): string
     {
         $this->buildCmap();
@@ -436,7 +441,7 @@ class TTFParser extends FileHandler
             }
         }
         if (0 === $offset31) {
-            throw MakeFontException::instance('No Unicode encoding found.');
+            throw $this->translator->instance('error_unicode_not_found');
         }
 
         $startCount = [];
@@ -447,7 +452,7 @@ class TTFParser extends FileHandler
         $this->seek($this->tables['cmap']['offset'] + $offset31);
         $format = $this->readUShort();
         if (4 !== $format) {
-            throw MakeFontException::format('Unexpected sub-table format: %d.', $format);
+            throw $this->translator->format('error_table_format', $format);
         }
         $this->skip(4); // length, language
         $segCount = $this->readUShort() / 2;
@@ -545,7 +550,7 @@ class TTFParser extends FileHandler
         $this->skip(12); // version, fontRevision, checkSumAdjustment
         $magicNumber = $this->readULong();
         if (0x5F0F3CF5 !== $magicNumber) {
-            throw MakeFontException::format('Incorrect magic number: 0x%08X.', $magicNumber);
+            throw $this->translator->format('error_magic_number', $magicNumber);
         }
         $this->skip(2); // flags
         $this->unitsPerEm = $this->readUShort();
@@ -664,7 +669,7 @@ class TTFParser extends FileHandler
             }
         }
         if ('' === $this->postScriptName) {
-            throw MakeFontException::instance('PostScript name not found.');
+            throw $this->translator->instance('error_postscript_not_found');
         }
     }
 
@@ -672,10 +677,10 @@ class TTFParser extends FileHandler
     {
         $version = $this->readULong();
         if (0x4F54544F === $version) { // 'OTTO'
-            throw MakeFontException::instance('OpenType font based on PostScript outlines is not supported.');
+            throw $this->translator->instance('error_open_type_unsupported');
         }
         if (0x010000 !== $version) { // TrueType outlines
-            throw MakeFontException::format('Unrecognized file version: 0x%06X.', $version);
+            throw $this->translator->format('error_file_version', $version);
         }
         $numTables = $this->readUShort();
         $this->skip(6); // searchRange, entrySelector, rangeShift
@@ -789,7 +794,7 @@ class TTFParser extends FileHandler
     private function seekTag(string $tag): void
     {
         if (!isset($this->tables[$tag])) {
-            throw MakeFontException::format('Table not found: %s.', $tag);
+            throw $this->translator->format('error_table_not_found', $tag);
         }
         $this->seek($this->tables[$tag]['offset']);
     }

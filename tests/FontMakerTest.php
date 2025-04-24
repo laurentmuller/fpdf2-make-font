@@ -69,7 +69,7 @@ class FontMakerTest extends TestCase
     public function testFontType1AfmNotFound(): void
     {
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessageMatches('/AFM font file not found:.*afm_not_found.afm.$/');
+        self::expectExceptionMessageMatches('/^File not found:.*afm_not_found.afm.$/');
         $name = 'afm_not_found';
         $this->generateFont(name: $name, ext: 'pfb');
     }
@@ -77,7 +77,7 @@ class FontMakerTest extends TestCase
     public function testFontType1Empty(): void
     {
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessageMatches('/AFM font file empty or not readable.*empty.afm.$/');
+        self::expectExceptionMessageMatches('/^File empty or not readable:.*empty.afm.$/');
         $name = 'empty';
         $this->generateFont(name: $name, ext: 'pfb');
     }
@@ -99,7 +99,7 @@ class FontMakerTest extends TestCase
     public function testFontType1NoName(): void
     {
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessage('FontName missing in AFM file.');
+        self::expectExceptionMessage('Font name missing in AFM file.');
         $name = 'no_name';
         $this->generateFont(name: $name, ext: 'pfb');
     }
@@ -127,7 +127,7 @@ class FontMakerTest extends TestCase
     public function testInvalidEncoding(): void
     {
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessage('Encoding not found: fake');
+        self::expectExceptionMessageMatches('/^File not found:.*fake.map.$/');
         $fontFile = $this->fonts . 'times.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile, 'fake');
@@ -146,7 +146,7 @@ class FontMakerTest extends TestCase
     {
         $fontFile = 'fake.txt';
         self::expectException(MakeFontException::class);
-        self::expectExceptionMessage('Font file not found: fake.txt.');
+        self::expectExceptionMessage('File not found: fake.txt.');
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
     }
@@ -175,6 +175,17 @@ class FontMakerTest extends TestCase
         $fontFile = $this->fonts . 'invalid_version.ttf';
         $fontMaker = new FontMaker();
         $fontMaker->makeFont($fontFile);
+    }
+
+    public function testLocale(): void
+    {
+        $maker = new FontMaker();
+        $actual = $maker->getLocale();
+        self::assertSame('en', $actual);
+
+        $maker->setLocale('fr');
+        $actual = $maker->getLocale();
+        self::assertSame('fr', $actual);
     }
 
     public function testNotEmbeddable(): void

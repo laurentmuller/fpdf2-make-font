@@ -20,11 +20,11 @@ class FileHandler
      */
     private mixed $handle;
 
-    public function __construct(string $file, string $mode = 'r')
+    public function __construct(string $file, string $mode = 'r', Translator $translator = new Translator())
     {
         $handle = \fopen($file, $mode);
         if (!\is_resource($handle)) {
-            throw MakeFontException::format('Unable to open file: %s.', $file);
+            throw $translator->format('error_file_open', $file);
         }
         $this->handle = $handle;
     }

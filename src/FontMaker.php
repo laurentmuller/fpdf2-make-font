@@ -48,6 +48,13 @@ class FontMaker
     private const FONT_TYPE_1 = 'Type1';
     private const NOT_DEF = '.notdef';
 
+    private Translator $translator;
+
+    public function __construct(string $locale = Translator::DEFAULT_LOCALE)
+    {
+        $this->translator = new Translator($locale);
+    }
+
     /**
      * Gets available encodings.
      *
@@ -79,41 +86,60 @@ class FontMaker
         ];
     }
 
+    public function getLocale(): string
+    {
+        return $this->translator->getLocale();
+    }
+
+    public function getTranslator(): Translator
+    {
+        return $this->translator;
+    }
+
     public function makeFont(
         string $fontFile,
         string $encoding = self::DEFAULT_ENCODING,
         bool $embed = true,
-        bool $subset = true
+        bool $subset = true,
+        string $locale = 'en'
     ): void {
         if (!\file_exists($fontFile)) {
-            throw MakeFontException::format('Font file not found: %s.', $fontFile);
+            throw $this->translator->format('error_file_not_found', $fontFile);
         }
 
-        $ext = \strtolower(\substr($fontFile, -3));
-        $type = match ($ext) {
-            'ttf', 'otf' => self::FONT_TRUE_TYPE,
+        $pathInfo = \pathinfo($fontFile);
+        $extension = $pathInfo['extension'] ?? '';
+        $type = match (\strtolower($extension)) {
             'pfb' => self::FONT_TYPE_1,
-            default => throw MakeFontException::format('Unrecognized font file extension: %s.', $ext),
+            'ttf', 'otf' => self::FONT_TRUE_TYPE,
+            default => throw $this->translator->format('error_extension', $extension)
         };
 
         $map = $this->loadMap($encoding);
-        $info = match ($type) {
-            self::FONT_TRUE_TYPE => $this->getInfoFromTrueType($fontFile, $embed, $map, $subset),
-            default => $this->getInfoFromType1($fontFile, $embed, $map)
+        $font = match ($type) {
+            self::FONT_TYPE_1 => $this->getFontFromType1($fontFile, $embed, $map),
+            self::FONT_TRUE_TYPE => $this->getFontFromTrueType($fontFile, $embed, $map, $subset)
         };
 
-        $basename = \substr(\basename($fontFile), 0, -4);
+        $baseName = $pathInfo['filename'];
         if ($embed) {
-            $file = $basename . '.z';
-            $data = (string) \gzcompress($info['Data']);
-            $this->saveToFile($file, $data, 'b');
-            $info['File'] = $file;
-            $this->message('Font file compressed generated: ' . $file);
+            $compressedFile = $baseName . '.z';
+            $data = (string) \gzcompress($font['Data']);
+            $this->saveToFile($compressedFile, $data, 'b');
+            $font['File'] = $compressedFile;
+            $this->message('Font file compressed generated: ' . $compressedFile);
         }
 
-        $phpFile = $basename . '.php';
-        $this->makeDefinitionFile($phpFile, $type, $encoding, $embed, $subset, $map, $info);
+        $phpFile = $baseName . '.php';
+        $this->makeDefinitionFile($phpFile, $type, $encoding, $embed, $subset, $map, $font);
         $this->message('Font file definition generated: ' . $phpFile);
+    }
+
+    public function setLocale(string $locale = Translator::DEFAULT_LOCALE): void
+    {
+        if ($locale !== $this->translator->getLocale()) {
+            $this->translator = new Translator($locale);
+        }
     }
 
     /**
@@ -139,20 +165,35 @@ class FontMaker
     }
 
     /**
+     * @return string[]
+     */
+    private function getFileLines(string $fileName): array
+    {
+        if (!\file_exists($fileName)) {
+            throw $this->translator->format('error_file_not_found', $fileName);
+        }
+        $lines = \file($fileName, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
+        if (false === $lines || [] === $lines) {
+            throw $this->translator->format('error_file_empty', $fileName);
+        }
+
+        return $lines;
+    }
+
+    /**
      * @phpstan-param array<int, MapType> $map
      *
      * @phpstan-return FontInfoType
      */
-    private function getInfoFromTrueType(string $fontFile, bool $embed, array $map, bool $subset): array
+    private function getFontFromTrueType(string $fontFile, bool $embed, array $map, bool $subset): array
     {
-        // Return information from a TrueType font
-        $parser = new TTFParser($fontFile);
+        $parser = new TTFParser($fontFile, $this->translator);
         $parser->parse();
 
-        $info = $this->createEmptyFont();
+        $font = $this->createEmptyFont();
         if ($embed) {
             if (!$parser->embeddable) {
-                throw MakeFontException::instance('Font license does not allow embedding.');
+                throw $this->translator->instance('error_license');
             }
             if ($subset) {
                 $chars = [];
@@ -162,28 +203,28 @@ class FontMaker
                     }
                 }
                 $parser->subset($chars);
-                $info['Data'] = $parser->build();
+                $font['Data'] = $parser->build();
             } else {
-                $info['Data'] = (string) \file_get_contents($fontFile);
+                $font['Data'] = (string) \file_get_contents($fontFile);
             }
-            $info['OriginalSize'] = \strlen($info['Data']);
+            $font['OriginalSize'] = \strlen($font['Data']);
         }
-        $info['FontName'] = $parser->postScriptName;
-        $info['Bold'] = $parser->bold;
-        $info['ItalicAngle'] = $parser->italicAngle;
-        $info['IsFixedPitch'] = $parser->isFixedPitch;
-        $info['Ascender'] = $parser->scale($parser->typoAscender);
-        $info['Descender'] = $parser->scale($parser->typoDescender);
-        $info['UnderlineThickness'] = $parser->scale($parser->underlineThickness);
-        $info['UnderlinePosition'] = $parser->scale($parser->underlinePosition);
-        $info['FontBBox'] = [
+        $font['FontName'] = $parser->postScriptName;
+        $font['Bold'] = $parser->bold;
+        $font['ItalicAngle'] = $parser->italicAngle;
+        $font['IsFixedPitch'] = $parser->isFixedPitch;
+        $font['Ascender'] = $parser->scale($parser->typoAscender);
+        $font['Descender'] = $parser->scale($parser->typoDescender);
+        $font['UnderlineThickness'] = $parser->scale($parser->underlineThickness);
+        $font['UnderlinePosition'] = $parser->scale($parser->underlinePosition);
+        $font['FontBBox'] = [
             $parser->scale($parser->xMin),
             $parser->scale($parser->yMin),
             $parser->scale($parser->xMax),
             $parser->scale($parser->yMax)];
-        $info['CapHeight'] = $parser->scale($parser->capHeight);
-        $info['MissingWidth'] = $parser->scale($parser->glyphs[0]['width']);
-        $widths = \array_fill(0, 256, $info['MissingWidth']);
+        $font['CapHeight'] = $parser->scale($parser->capHeight);
+        $font['MissingWidth'] = $parser->scale($parser->glyphs[0]['width']);
+        $widths = \array_fill(0, 256, $font['MissingWidth']);
         foreach ($map as $index => $value) {
             if (self::NOT_DEF === $value['name']) {
                 continue;
@@ -197,9 +238,9 @@ class FontMaker
                 $this->warning(\sprintf('Character %s is missing', $value['name']));
             }
         }
-        $info['Widths'] = $widths;
+        $font['Widths'] = $widths;
 
-        return $info;
+        return $font;
     }
 
     /**
@@ -207,28 +248,28 @@ class FontMaker
      *
      * @phpstan-return FontInfoType
      */
-    private function getInfoFromType1(string $fontFile, bool $embed, array $map): array
+    private function getFontFromType1(string $fontFile, bool $embed, array $map): array
     {
-        $info = $this->createEmptyFont();
+        $font = $this->createEmptyFont();
         if ($embed) {
-            $this->updateSegments($fontFile, $info);
+            $this->updateSegments($fontFile, $font);
         }
 
         $afmFile = \substr($fontFile, 0, -3) . 'afm';
-        $cw = $this->parseAfmFile($afmFile, $info);
+        $cw = $this->parseAfmFile($afmFile, $font);
 
-        if (!isset($info['FontName'])) {
-            throw MakeFontException::instance('FontName missing in AFM file.');
+        if (!isset($font['FontName'])) {
+            throw $this->translator->instance('error_font_name');
         }
-        if (!isset($info['Ascender'])) {
-            $info['Ascender'] = $info['FontBBox'][3];
+        if (!isset($font['Ascender'])) {
+            $font['Ascender'] = $font['FontBBox'][3];
         }
-        if (!isset($info['Descender'])) {
-            $info['Descender'] = $info['FontBBox'][1];
+        if (!isset($font['Descender'])) {
+            $font['Descender'] = $font['FontBBox'][1];
         }
-        $info['Bold'] = isset($info['Weight']) && 1 === \preg_match('/bold|black/i', $info['Weight']);
-        $info['MissingWidth'] = $cw[self::NOT_DEF] ?? 0;
-        $widths = \array_fill(0, 256, $info['MissingWidth']);
+        $font['Bold'] = isset($font['Weight']) && 1 === \preg_match('/bold|black/i', $font['Weight']);
+        $font['MissingWidth'] = $cw[self::NOT_DEF] ?? 0;
+        $widths = \array_fill(0, 256, $font['MissingWidth']);
         foreach ($map as $c => $v) {
             if (self::NOT_DEF !== $v['name']) {
                 if (isset($cw[$v['name']])) {
@@ -238,9 +279,9 @@ class FontMaker
                 }
             }
         }
-        $info['Widths'] = $widths;
+        $font['Widths'] = $widths;
 
-        return $info;
+        return $font;
     }
 
     /**
@@ -248,13 +289,8 @@ class FontMaker
      */
     private function loadMap(string $encoding): array
     {
-        $file = \sprintf('%s/map/%s.map', __DIR__, \strtolower($encoding));
-        if (!\file_exists($file)) {
-            throw MakeFontException::format('Encoding not found: %s.', $encoding);
-        }
-
-        /** @phpstan-var string[] $lines */
-        $lines = (array) \file($file, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
+        $fileName = \sprintf('%s/map/%s.map', __DIR__, \strtolower($encoding));
+        $lines = $this->getFileLines($fileName);
 
         $map = \array_fill(0, 256, ['uv' => -1, 'name' => self::NOT_DEF]);
         foreach ($lines as $line) {
@@ -270,7 +306,7 @@ class FontMaker
 
     /**
      * @phpstan-param array<int, MapType> $map
-     * @phpstan-param FontInfoType $info
+     * @phpstan-param FontInfoType $font
      */
     private function makeDefinitionFile(
         string $file,
@@ -279,30 +315,30 @@ class FontMaker
         bool $embed,
         bool $subset,
         array $map,
-        array $info
+        array $font
     ): void {
         $output = "<?php\n";
         $output .= '$type = \'' . $type . "';\n";
-        $output .= '$name = \'' . ($info['FontName'] ?? '') . "';\n";
+        $output .= '$name = \'' . ($font['FontName'] ?? '') . "';\n";
         $output .= '$enc = \'' . $encoding . "';\n";
-        $output .= '$up = ' . $info['UnderlinePosition'] . ";\n";
-        $output .= '$ut = ' . $info['UnderlineThickness'] . ";\n";
+        $output .= '$up = ' . $font['UnderlinePosition'] . ";\n";
+        $output .= '$ut = ' . $font['UnderlineThickness'] . ";\n";
 
         if ($embed) {
-            $output .= '$file = \'' . $info['File'] . "';\n";
+            $output .= '$file = \'' . $font['File'] . "';\n";
             if (self::FONT_TYPE_1 === $type) {
-                $output .= '$size1 = ' . $info['Size1'] . ";\n";
-                $output .= '$size2 = ' . $info['Size2'] . ";\n";
+                $output .= '$size1 = ' . $font['Size1'] . ";\n";
+                $output .= '$size2 = ' . $font['Size2'] . ";\n";
             } else {
-                $output .= '$originalsize = ' . $info['OriginalSize'] . ";\n";
+                $output .= '$originalsize = ' . $font['OriginalSize'] . ";\n";
                 if ($subset) {
                     $output .= "\$subsetted = true;\n";
                 }
             }
         }
 
-        $output .= '$desc = ' . $this->makeFontDescriptor($info) . ";\n";
-        $output .= '$cw = ' . $this->makeWidthArray($info['Widths']) . ";\n";
+        $output .= '$desc = ' . $this->makeFontDescriptor($font) . ";\n";
+        $output .= '$cw = ' . $this->makeWidthArray($font['Widths']) . ";\n";
         if (self::DEFAULT_ENCODING !== $encoding) {
             $diff = $this->makeFontEncoding($map);
             if ('' !== $diff) {
@@ -315,42 +351,41 @@ class FontMaker
     }
 
     /**
-     * @phpstan-param FontInfoType $info
+     * @phpstan-param FontInfoType $font
      */
-    private function makeFontDescriptor(array $info): string
+    private function makeFontDescriptor(array $font): string
     {
-        // Ascent
-        $output = "[\n\t'Ascent' => " . ($info['Ascender'] ?? 0);
-        // Descent
-        $output .= ",\n\t'Descent' => " . ($info['Descender'] ?? 0);
-        // CapHeight
-        $output .= ",\n\t'CapHeight' => " . ($info['CapHeight'] ?? $info['Ascender'] ?? 0);
+        // Ascent, Descent, and CapHeight
+        $output = "[\n\t'Ascent' => " . ($font['Ascender'] ?? 0);
+        $output .= ",\n\t'Descent' => " . ($font['Descender'] ?? 0);
+        $output .= ",\n\t'CapHeight' => " . ($font['CapHeight'] ?? $font['Ascender'] ?? 0);
 
         // Flags
         $flags = 0;
-        if ($info['IsFixedPitch']) {
+        if ($font['IsFixedPitch']) {
             $flags += 1 << 0;
         }
         $flags += 1 << 5;
-        if (0 !== $info['ItalicAngle']) {
+        if (0 !== $font['ItalicAngle']) {
             $flags += 1 << 6;
         }
         $output .= ",\n\t'Flags' => " . $flags;
+
         // FontBBox
-        $output .= ",\n\t'FontBBox' => '[" . \implode(' ', $info['FontBBox']) . "]'";
+        $output .= ",\n\t'FontBBox' => '[" . \implode(' ', $font['FontBBox']) . "]'";
         // ItalicAngle
-        $output .= ",\n\t'ItalicAngle' => " . $info['ItalicAngle'];
+        $output .= ",\n\t'ItalicAngle' => " . $font['ItalicAngle'];
         // StemV
-        if (isset($info['StdVW'])) {
-            $stemv = $info['StdVW'];
-        } elseif ($info['Bold']) {
+        if (isset($font['StdVW'])) {
+            $stemv = $font['StdVW'];
+        } elseif ($font['Bold']) {
             $stemv = 120;
         } else {
             $stemv = 70;
         }
         $output .= ",\n\t'StemV' => " . $stemv;
         // MissingWidth
-        $output .= ",\n\t'MissingWidth' => " . $info['MissingWidth'] . "\n]";
+        $output .= ",\n\t'MissingWidth' => " . $font['MissingWidth'] . "\n]";
 
         return $output;
     }
@@ -435,17 +470,17 @@ class FontMaker
     private function makeWidthArray(array $widths): string
     {
         $output = "[\n\t";
-        for ($ch = 0; $ch <= 255; ++$ch) {
+        for ($cp = 0; $cp <= 255; ++$cp) {
             $output .= match (true) {
                 // single quote and backslash characters
-                39 === $ch, 92 === $ch => \sprintf("'%s'", \addslashes(\chr($ch))),
-                //  ASCII printable characters
-                $ch >= 32 && $ch <= 126 => \sprintf("'%s'", \chr($ch)),
+                39 === $cp, 92 === $cp => \sprintf("'%s'", \addslashes(\chr($cp))),
+                //  ASCII-printable characters
+                $cp >= 32 && $cp <= 126 => \sprintf("'%s'", \chr($cp)),
                 // ASCII control characters and extended codes
-                default => "\chr($ch)"
+                default => "\chr($cp)"
             };
-            $output .= ' => ' . $widths[$ch];
-            if ($ch < 255) {
+            $output .= ' => ' . $widths[$cp];
+            if ($cp < 255) {
                 $output .= ",\n\t";
             }
         }
@@ -464,21 +499,14 @@ class FontMaker
     }
 
     /**
-     * @phpstan-param FontInfoType $info
+     * @phpstan-param FontInfoType $font
      *
      * @phpstan-return array<string, int>
      */
-    private function parseAfmFile(string $afmFile, array &$info): array
+    private function parseAfmFile(string $afmFile, array &$font): array
     {
-        if (!\file_exists($afmFile)) {
-            throw MakeFontException::format('AFM font file not found: %s.', $afmFile);
-        }
-        $lines = \file($afmFile, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
-        if (false === $lines || [] === $lines) {
-            throw MakeFontException::format('AFM font file empty or not readable: %s.', $afmFile);
-        }
-
         $cw = [];
+        $lines = $this->getFileLines($afmFile);
         foreach ($lines as $line) {
             $values = \explode(' ', \rtrim($line));
             if (\count($values) < 2) {
@@ -491,7 +519,7 @@ class FontMaker
                     break;
                 case 'Weight':
                 case 'FontName':
-                    $info[$entry] = $values[1];
+                    $font[$entry] = $values[1];
                     break;
                 case 'Ascender':
                 case 'Descender':
@@ -500,13 +528,13 @@ class FontMaker
                 case 'CapHeight':
                 case 'StdVW':
                 case 'ItalicAngle':
-                    $info[$entry] = (int) $values[1];
+                    $font[$entry] = (int) $values[1];
                     break;
                 case 'IsFixedPitch':
-                    $info[$entry] = \filter_var($values[1], \FILTER_VALIDATE_BOOLEAN);
+                    $font[$entry] = \filter_var($values[1], \FILTER_VALIDATE_BOOLEAN);
                     break;
                 case 'FontBBox':
-                    $info[$entry] = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];
+                    $font[$entry] = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];
                     break;
             }
         }
@@ -522,7 +550,7 @@ class FontMaker
         /** @phpstan-var array{marker: int, type: int, size: positive-int} $values */
         $values = $handler->unpack('Cmarker/Ctype/Vsize', 6);
         if (128 !== $values['marker']) {
-            throw MakeFontException::instance('Font file is not a valid binary Type1.');
+            throw $this->translator->instance('error_invalid_type');
         }
 
         return $values['size'];
@@ -536,9 +564,9 @@ class FontMaker
     }
 
     /**
-     * @phpstan-param FontInfoType $info
+     * @phpstan-param FontInfoType $font
      */
-    private function updateSegments(string $fontFile, array &$info): void
+    private function updateSegments(string $fontFile, array &$font): void
     {
         $handler = new FileHandler($fontFile, 'r');
 
@@ -550,9 +578,9 @@ class FontMaker
         $size2 = $this->readSegment($handler);
         $data2 = $handler->read($size2);
 
-        $info['Data'] = $data1 . $data2;
-        $info['Size1'] = $size1;
-        $info['Size2'] = $size2;
+        $font['Data'] = $data1 . $data2;
+        $font['Size1'] = $size1;
+        $font['Size2'] = $size2;
 
         $handler->close();
     }
