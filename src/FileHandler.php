@@ -61,13 +61,12 @@ class FileHandler
         return (int) \ftell($this->getHandle());
     }
 
-    /**
-     * @phpstan-return array<string, int>
-     */
-    public function unpack(string $format, int $length): array
+    public function unpackInt(string $format, int $length): int
     {
-        /** @phpstan-var array<string, int> */
-        return (array) \unpack($format, $this->read($length));
+        /** @phpstan-var array<int> $values */
+        $values = (array) \unpack($format, $this->read($length));
+
+        return $values[1];
     }
 
     public function write(string $data): void

@@ -248,12 +248,7 @@ class TTFParser extends FileHandler
 
     private function buildFont(): string
     {
-        $tags = [];
-        foreach (self::TAG_NAMES as $tag) {
-            if (isset($this->tables[$tag])) {
-                $tags[] = $tag;
-            }
-        }
+        $tags = \array_filter(self::TAG_NAMES, fn (string $tag): bool => isset($this->tables[$tag]));
         $tagsCount = \count($tags);
         $offset = 12 + 16 * $tagsCount;
         foreach ($tags as $tag) {
@@ -765,10 +760,8 @@ class TTFParser extends FileHandler
 
     private function readShort(): int
     {
-        /** @phpstan-var array{n: int} $values */
-        $values = $this->unpack('nn', 2);
-        $value = $values['n'];
-        if ($value >= 0x8000) {
+        $value = $this->readUShort();
+        if ($value >= 0x008000) {
             $value -= 0x010000;
         }
 
@@ -777,18 +770,12 @@ class TTFParser extends FileHandler
 
     private function readULong(): int
     {
-        /** @phpstan-var array{N: int} $values */
-        $values = $this->unpack('NN', 4);
-
-        return $values['N'];
+        return $this->unpackInt('N', 4);
     }
 
     private function readUShort(): int
     {
-        /** @phpstan-var array{n: int} $values */
-        $values = $this->unpack('nn', 2);
-
-        return $values['n'];
+        return $this->unpackInt('n', 2);
     }
 
     private function seekTag(string $tag): void

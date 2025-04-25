@@ -544,13 +544,15 @@ class FontMaker
      */
     private function readSegment(FileHandler $handler): int
     {
-        /** @phpstan-var array{marker: int, type: int, size: positive-int} $values */
-        $values = $handler->unpack('Cmarker/Ctype/Vsize', 6);
-        if (128 !== $values['marker']) {
+        $marker = $handler->unpackInt('C', 1);
+        $handler->skip(1); // type
+        /** @phpstan-var positive-int $size */
+        $size = $handler->unpackInt('V', 4);
+        if (128 !== $marker) {
             throw $this->translator->instance('error_invalid_type');
         }
 
-        return $values['size'];
+        return $size;
     }
 
     private function saveToFile(string $file, string $data, string $mode): void
