@@ -15,6 +15,14 @@ namespace fpdf;
 
 class Translator
 {
+    /**
+     * The allowed locales.
+     */
+    public const ALLOWED_LOCALES = ['en', 'fr'];
+
+    /**
+     * The default locale.
+     */
     public const DEFAULT_LOCALE = 'en';
 
     private string $locale = self::DEFAULT_LOCALE;
@@ -27,7 +35,7 @@ class Translator
     public function __construct(string $locale = self::DEFAULT_LOCALE)
     {
         $this->messages = $this->loadFile(self::DEFAULT_LOCALE);
-        if (self::DEFAULT_LOCALE !== $locale) {
+        if (self::DEFAULT_LOCALE !== $locale && self::isAllowedLocale($locale)) {
             $this->merge($locale);
         }
     }
@@ -52,16 +60,17 @@ class Translator
         return MakeFontException::instance($this->get($key));
     }
 
+    public static function isAllowedLocale(string $locale): bool
+    {
+        return \in_array($locale, self::ALLOWED_LOCALES, true);
+    }
+
     /**
      * @phpstan-return array<string, string>
      */
     private function loadFile(string $locale): array
     {
         $file = \sprintf('%s/i18n/%s.json', __DIR__, \strtolower($locale));
-        if (!\file_exists($file)) {
-            return [];
-        }
-
         $content = (string) \file_get_contents($file);
 
         /** @phpstan-var array<string, string> */
@@ -70,11 +79,8 @@ class Translator
 
     private function merge(string $locale): void
     {
-        $custom = $this->loadFile($locale);
-        if ([] === $custom) {
-            return;
-        }
-        $this->messages = \array_merge($this->messages, $custom);
+        $messages = $this->loadFile($locale);
+        $this->messages = \array_merge($this->messages, $messages);
         $this->locale = $locale;
     }
 }

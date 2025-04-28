@@ -129,11 +129,13 @@ class FontMaker
         $this->message(\sprintf($this->trans('info_file_generated'), $phpFile));
     }
 
-    public function setLocale(string $locale = Translator::DEFAULT_LOCALE): void
+    public function setLocale(string $locale = Translator::DEFAULT_LOCALE): self
     {
-        if ($locale !== $this->translator->getLocale()) {
+        if ($locale !== $this->getLocale() && Translator::isAllowedLocale($locale)) {
             $this->translator = new Translator($locale);
         }
+
+        return $this;
     }
 
     /**

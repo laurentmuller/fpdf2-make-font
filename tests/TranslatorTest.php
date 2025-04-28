@@ -23,6 +23,16 @@ class TranslatorTest extends TestCase
     private const STR_VALUE = 'value';
 
     /**
+     * @return \Generator<int, array{0: string, 1: bool}>
+     */
+    public static function getAllowedLocales(): \Generator
+    {
+        yield ['en', true];
+        yield ['fr', true];
+        yield ['fake', false];
+    }
+
+    /**
      * @return \Generator<int, array{0: string, 1: string, 2?: string|int}>
      */
     public static function getEnglishExceptions(): \Generator
@@ -265,6 +275,13 @@ class TranslatorTest extends TestCase
         $exception = $translator->instance('error_unknown');
         $actual = $exception->getMessage();
         self::assertSame('Unknown error.', $actual);
+    }
+
+    #[DataProvider('getAllowedLocales')]
+    public function testIsAllowedLocale(string $locale, bool $expected): void
+    {
+        $actual = Translator::isAllowedLocale($locale);
+        self::assertSame($expected, $actual);
     }
 
     public function testKeyNotDefined(): void
