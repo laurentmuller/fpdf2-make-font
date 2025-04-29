@@ -153,7 +153,7 @@ $pdf->output();
 A [Symfony application](https://github.com/laurentmuller/fpdf2-make-font-ui) has
 been created to generate fonts.
 
-![User Interface](images/ui_light.png)
+![User Interface](images/ui_light_wide.png)
 
 ## Code Quality
 

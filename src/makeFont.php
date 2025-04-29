@@ -38,7 +38,7 @@ if (1 === $argc) {
 
 $file = __DIR__ . '/../vendor/autoload.php';
 if (\is_file($file)) {
-    require $file;
+    require_once $file;
 }
 
 try {

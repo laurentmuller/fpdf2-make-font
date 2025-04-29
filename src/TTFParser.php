@@ -236,9 +236,9 @@ class TTFParser extends FileHandler
             if ($chars[$i] > $segment[1] + 1) {
                 $segments[] = $segment;
                 $segment = [$chars[$i], $chars[$i]];
-            } else {
-                ++$segment[1];
+                continue;
             }
+            ++$segment[1];
         }
         $segments[] = $segment;
         $segments[] = [0xFFFF, 0xFFFF];
