@@ -13,11 +13,13 @@ declare(strict_types=1);
 
 if (!\class_exists('Phar')) {
     echo "Enable Phar extension.\n";
-    exit(1);
+
+    return;
 }
 if (\ini_get('phar.readonly')) {
     echo "Set directive 'phar.readonly=off'.\n";
-    exit(1);
+
+    return;
 }
 
 function addFiles(Phar $phar, string $baseDirectory, string $sourceDirectory): void
@@ -46,12 +48,14 @@ try {
 
     if (!\is_dir($buildDirectory) && !\mkdir($buildDirectory)) {
         echo "Unable to create the output directory: $buildDirectory.\n";
-        exit(1);
+
+        return;
     }
 
     if (\is_file($pharFile) && !\unlink($pharFile)) {
         echo "Unable to remove the old Phar: $pharFile.\n";
-        exit(1);
+
+        return;
     }
 
     // create phar
@@ -76,5 +80,4 @@ try {
     echo "$pharFile successfully created.";
 } catch (Exception $e) {
     echo 'Error: ' . $e->getMessage() . "\n";
-    exit(1);
 }
