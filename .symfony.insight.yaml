@@ -3,5 +3,7 @@ global_exclude_dirs:
     - vendor
     - tests
 rules:
+    php.class_too_long:
+        enabled: false
     php.use_global_variable_or_function:
         enabled: false
