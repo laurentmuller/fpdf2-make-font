@@ -1,7 +1,7 @@
 # FPDF2 Make Font
 
 This repository is used within [FPDF2](https://github.com/laurentmuller/fpdf2)
-to create fonts.
+to create font definitions.
 
 All code is copied from the [FPDF](https://www.fpdf.org/) created by Olivier
 PLATHEY.
@@ -67,11 +67,11 @@ embedded font. As a result, the size of the PDF file can be greatly reduced,
 especially if the original font was big.
 
 After you have called the function (create a new file for this and include
-`make.php`), a `.php` file is created, with the same name as the font file. You
+`make.php`), a `.json` file is created, with the same name as the font file. You
 may rename it if you wish. If the case of embedding, the font file is compressed
 and gives a second file with `.z` as extension except if the compression
 function is not available (it requires Zlib). You may rename it too, but in
-this case you have to change the variable `$file` in the `.php` file
+this case you have to change the variable `$file` in the `.json` file
 accordingly.
 
 **Example:**
@@ -82,7 +82,7 @@ require('src/makeFont.php');
 makeFont('C:\\Windows\\Fonts\\comic.ttf','cp1252');
 ```
 
-Which gives the files `comic.php` and `comic.z`.
+Which gives the files `comic.json` and `comic.z`.
 
 Then copy the generated files to the font directory. If the font file could
 not be compressed, copy it directly instead of the `.z` version.
@@ -99,7 +99,7 @@ The second step is straightforward. You only need to call the `addFont()`
 method:
 
 ```php
-$pdf->addFont('Comic', PdfFontStyle::REGULAR, 'comic.php');
+$pdf->addFont('Comic', PdfFontStyle::REGULAR, 'comic.json');
 ```
 
 And the font is now available (in regular and underlined styles), usable like
@@ -107,7 +107,7 @@ the others. If we had worked with Comic Sans MS Bold (`comicbd.ttf`), we would
 have written:
 
 ```php
-$pdf->addFont('Comic', PdfFontStyle::BOLD, 'comicbd.php');
+$pdf->addFont('Comic', PdfFontStyle::BOLD, 'comicbd.json');
 ```
 
 **Full Example:**
@@ -125,7 +125,7 @@ makeFont('CevicheOne-Regular.ttf', 'cp1252');
 The script produces the following output:
 
 - Font file compressed: `CevicheOne-Regular.z`.
-- Font definition file generated: `CevicheOne-Regular.php`.
+- Font definition file generated: `CevicheOne-Regular.json`.
 
 Alternatively, we could have used the command line:
 
@@ -141,7 +141,7 @@ use fpdf\Enums\PdfFontStyle;
 use fpdf\PdfDocument;
 
 $pdf = new PdfDocument();
-$pdf->addFont('CevicheOne', PdfFontStyle::REGULAR, 'CevicheOne-Regular.php');
+$pdf->addFont('CevicheOne', PdfFontStyle::REGULAR, 'CevicheOne-Regular.json');
 $pdf->addPage();
 $pdf->setFont('CevicheOne', PdfFontStyle::REGULAR, 45);
 $pdf->write(10, 'Enjoy new fonts with FPDF!');

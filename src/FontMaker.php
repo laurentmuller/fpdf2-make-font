@@ -124,9 +124,10 @@ class FontMaker
             $this->message(\sprintf($this->trans('info_compressed_generated'), $compressedFile));
         }
 
-        $phpFile = $baseName . '.php';
-        $this->makeDefinitionFile($phpFile, $type, $encoding, $embed, $subset, $map, $font);
-        $this->message(\sprintf($this->trans('info_file_generated'), $phpFile));
+        $jsonFile = $baseName . '.json';
+        $this->makeDefinitionFile($jsonFile, $type, $encoding, $embed, $subset, $map, $font);
+
+        $this->message(\sprintf($this->trans('info_file_generated'), $jsonFile));
     }
 
     public function setLocale(string $locale = Translator::DEFAULT_LOCALE): self
@@ -314,49 +315,49 @@ class FontMaker
         array $map,
         array $font
     ): void {
-        $output = "<?php\n";
-        $output .= '$type = \'' . $type . "';\n";
-        $output .= '$name = \'' . ($font['FontName'] ?? '') . "';\n";
-        $output .= '$enc = \'' . $encoding . "';\n";
-        $output .= '$up = ' . $font['UnderlinePosition'] . ";\n";
-        $output .= '$ut = ' . $font['UnderlineThickness'] . ";\n";
+        $data = [
+            'type' => $type,
+            'name' => $font['FontName'] ?? '',
+            'enc' => $encoding,
+            'up' => $font['UnderlinePosition'],
+            'ut' => $font['UnderlineThickness'],
+        ];
 
         if ($embed) {
-            $output .= '$file = \'' . $font['File'] . "';\n";
+            $data['file'] = $font['File'];
             if (self::FONT_TYPE_1 === $type) {
-                $output .= '$size1 = ' . $font['Size1'] . ";\n";
-                $output .= '$size2 = ' . $font['Size2'] . ";\n";
+                $data['size1'] = $font['Size1'];
+                $data['size2'] = $font['Size2'];
             } else {
-                $output .= '$originalsize = ' . $font['OriginalSize'] . ";\n";
+                $data['originalsize'] = $font['OriginalSize'];
                 if ($subset) {
-                    $output .= "\$subsetted = true;\n";
+                    $data['originalsize'] = true;
                 }
             }
         }
 
-        $output .= '$desc = ' . $this->makeFontDescriptor($font) . ";\n";
-        $output .= '$cw = ' . $this->makeWidthArray($font['Widths']) . ";\n";
+        $data['desc'] = $this->makeFontDescriptor($font);
+        $data['cw'] = $font['Widths'];
+        $data['uw'] = $this->makeUnicode($map);
         if (self::DEFAULT_ENCODING !== $encoding) {
             $diff = $this->makeFontEncoding($map);
             if ('' !== $diff) {
-                $output .= '$diff = \'' . $diff . "';\n";
+                $data['diff'] = $diff;
             }
         }
-        $output .= '$uv = ' . $this->makeUnicodeArray($map) . ";\n";
 
+        /** @phpstan-var non-empty-string $output */
+        $output = \json_encode($data, \JSON_FORCE_OBJECT | \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
         $this->saveToFile($file, $output, 't');
     }
 
     /**
      * @phpstan-param FontInfoType $font
+     *
+     * @phpstan-return array<string, int|int[]>
      */
-    private function makeFontDescriptor(array $font): string
+    private function makeFontDescriptor(array $font): array
     {
-        // Ascent, Descent, and CapHeight
-        $output = "[\n\t'Ascent' => " . ($font['Ascender'] ?? 0);
-        $output .= ",\n\t'Descent' => " . ($font['Descender'] ?? 0);
-        $output .= ",\n\t'CapHeight' => " . ($font['CapHeight'] ?? $font['Ascender'] ?? 0);
-
         // Flags
         $flags = 0;
         if ($font['IsFixedPitch']) {
@@ -366,12 +367,7 @@ class FontMaker
         if (0 !== $font['ItalicAngle']) {
             $flags += 1 << 6;
         }
-        $output .= ",\n\t'Flags' => " . $flags;
 
-        // FontBBox
-        $output .= ",\n\t'FontBBox' => '[" . \implode(' ', $font['FontBBox']) . "]'";
-        // ItalicAngle
-        $output .= ",\n\t'ItalicAngle' => " . $font['ItalicAngle'];
         // StemV
         if (isset($font['StdVW'])) {
             $stemv = $font['StdVW'];
@@ -380,11 +376,17 @@ class FontMaker
         } else {
             $stemv = 70;
         }
-        $output .= ",\n\t'StemV' => " . $stemv;
-        // MissingWidth
-        $output .= ",\n\t'MissingWidth' => " . $font['MissingWidth'] . "\n]";
 
-        return $output;
+        return [
+            'flags' => $flags,
+            'ascent' => $font['Ascender'] ?? 0,
+            'descent' => $font['Descender'] ?? 0,
+            'capHeight' => $font['CapHeight'] ?? $font['Ascender'] ?? 0,
+            'italicAngle' => $font['ItalicAngle'],
+            'missingWidth' => $font['MissingWidth'],
+            'stemV' => $stemv,
+            'fontBBox' => $font['FontBBox'],
+        ];
     }
 
     /**
@@ -398,13 +400,14 @@ class FontMaker
         $output = '';
         $source = $this->loadMap(self::DEFAULT_ENCODING);
         for ($ch = 32; $ch <= 255; ++$ch) {
-            if ($map[$ch]['name'] !== $source[$ch]['name']) {
-                if ($ch !== $last + 1) {
-                    $output .= $ch . ' ';
-                }
-                $last = $ch;
-                $output .= '/' . $map[$ch]['name'] . ' ';
+            if ($map[$ch]['name'] === $source[$ch]['name']) {
+                continue;
             }
+            if ($ch !== $last + 1) {
+                $output .= $ch . ' ';
+            }
+            $output .= '/' . $map[$ch]['name'] . ' ';
+            $last = $ch;
         }
 
         return \rtrim($output);
@@ -412,8 +415,10 @@ class FontMaker
 
     /**
      * @phpstan-param array<int, MapType> $map
+     *
+     * @phpstan-return array<int, int|int[]>
      */
-    private function makeUnicodeArray(array $map): string
+    private function makeUnicode(array $map): array
     {
         /** @phpstan-var RangeType[] $ranges */
         $ranges = [];
@@ -441,49 +446,13 @@ class FontMaker
             $ranges[] = $range;
         }
 
-        $output = '';
+        $data = [];
         foreach ($ranges as $current) {
-            if ('' !== $output) {
-                $output .= ",\n\t";
-            } else {
-                $output = "[\n\t";
-            }
-            $output .= $current[0] . ' => ';
             $nb = $current[1] - $current[0] + 1;
-            if ($nb > 1) {
-                $output .= '[' . $current[2] . ', ' . $nb . ']';
-            } else {
-                $output .= $current[2];
-            }
+            $data[$current[0]] = $nb > 1 ? [$current[2], $nb] : $current[2];
         }
-        $output .= "\n]";
 
-        return $output;
-    }
-
-    /**
-     * @phpstan-param int[] $widths
-     */
-    private function makeWidthArray(array $widths): string
-    {
-        $output = "[\n\t";
-        for ($cp = 0; $cp <= 255; ++$cp) {
-            $output .= match (true) {
-                // single quote and backslash characters
-                39 === $cp, 92 === $cp => \sprintf("'%s'", \addslashes(\chr($cp))),
-                //  ASCII-printable characters
-                $cp >= 32 && $cp <= 126 => \sprintf("'%s'", \chr($cp)),
-                // ASCII control characters and extended codes
-                default => "\chr($cp)"
-            };
-            $output .= ' => ' . $widths[$cp];
-            if ($cp < 255) {
-                $output .= ",\n\t";
-            }
-        }
-        $output .= "\n]";
-
-        return $output;
+        return $data;
     }
 
     private function message(string $message, string $severity = 'info'): void

@@ -15,13 +15,57 @@ namespace fpdf;
 
 /**
  * Class to parse a TTF font.
+ *
+ * @phpstan-type GlyphType array{
+ *    name: string|int,
+ *    width: int,
+ *    lsb: int,
+ *    length: int,
+ *    offset: int,
+ *    ssid: int,
+ *    components? : array<int, int>}
+ * @phpstan-type TableType array{
+ *    offset: int,
+ *    length: int,
+ *    data: string,
+ *    checkSum: string}
+ * @phpstan-type CmapType array{
+ *    0: int[],
+ *    1: int[],
+ *    2: int[],
+ *    3: int[],
+ *    4: string}
+ * @phpstan-type CmapSegmentType array<int, int[]>
  */
 class TTFParser extends FileHandler
 {
-    private const TAG_NAMES = [
-        'cmap', 'cvt ', 'fpgm', 'glyf',
-        'head', 'hhea', 'hmtx', 'loca',
-        'maxp', 'name', 'post', 'prep',
+    private const TAG_CMAP = 'cmap';
+    private const TAG_CVT = 'cvt';
+    private const TAG_FPGM = 'fpgm';
+    private const TAG_GLYF = 'glyf';
+    private const TAG_HEAD = 'head';
+    private const TAG_HHEA = 'hhea';
+    private const TAG_HMTX = 'hmtx';
+    private const TAG_LOCA = 'loca';
+    private const TAG_MAXP = 'maxp';
+    private const TAG_NAME = 'name';
+    private const TAG_OS2 = 'OS/2';
+    private const TAG_POST = 'post';
+    private const TAG_PREP = 'prep';
+
+    private const TAGS_NAME = [
+        self::TAG_CMAP,
+        self::TAG_CVT,
+        self::TAG_FPGM,
+        self::TAG_GLYF,
+        self::TAG_HEAD,
+        self::TAG_HHEA,
+        self::TAG_HMTX,
+        self::TAG_LOCA,
+        self::TAG_MAXP,
+        self::TAG_NAME,
+        self::TAG_POST,
+        self::TAG_PREP,
     ];
 
     public bool $bold = false;
@@ -29,15 +73,7 @@ class TTFParser extends FileHandler
     /** @phpstan-var array<int, int>  */
     public array $chars = [];
     public bool $embeddable = false;
-    /**
-     * @phpstan-var array<int, array{
-     *   name: string|int,
-     *   width: int,
-     *   lsb: int,
-     *   length: int,
-     *   offset: int,
-     *   ssid: int,
-     *   components? : array<int, int>}> */
+    /** @phpstan-var array<int, GlyphType> */
     public array $glyphs = [];
     public bool $isFixedPitch = false;
     public int $italicAngle = 0;
@@ -59,12 +95,7 @@ class TTFParser extends FileHandler
     private array $subsettedChars = [];
     /** @phpstan-var array<int, int>  */
     private array $subsettedGlyphs = [];
-    /**
-     * @phpstan-var array<string, array{
-     *   offset: int,
-     *   length: int,
-     *   data: string,
-     *   checkSum: string}> */
+    /** @phpstan-var array<self::TAG_*, TableType> */
     private array $tables = [];
 
     public function __construct(string $file, private readonly Translator $translator = new Translator())
@@ -72,6 +103,9 @@ class TTFParser extends FileHandler
         parent::__construct(file: $file, translator: $this->translator);
     }
 
+    /**
+     * Build the font definition.
+     */
     public function build(): string
     {
         $this->buildCmap();
@@ -85,6 +119,9 @@ class TTFParser extends FileHandler
         return $this->buildFont();
     }
 
+    /**
+     * Parse the font file.
+     */
     public function parse(): void
     {
         $this->parseOffsetTable();
@@ -100,6 +137,9 @@ class TTFParser extends FileHandler
         $this->parsePost();
     }
 
+    /**
+     * Scale a value from the font units to the user units.
+     */
     public function scale(float $value): int
     {
         return (int) \round($value * 1000.0 / $this->unitsPerEm);
@@ -173,18 +213,13 @@ class TTFParser extends FileHandler
         $data .= \pack('nnN', 3, 1, 12); // platformID, encodingID, offset
         $data .= \pack('nnn', 4, 6 + \strlen($cmap), 0); // format, length, language
         $data .= $cmap;
-        $this->setTable('cmap', $data);
+        $this->setTable(self::TAG_CMAP, $data);
     }
 
     /**
-     * @phpstan-param array<int, int[]> $segments
+     * @phpstan-param CmapSegmentType $segments
      *
-     * @phpstan-return array{
-     *     0: int[],
-     *     1: int[],
-     *     2: int[],
-     *     3: int[],
-     *     4: string}
+     * @phpstan-return CmapType
      */
     private function buildCmapFormat(array $segments): array
     {
@@ -224,7 +259,7 @@ class TTFParser extends FileHandler
     }
 
     /**
-     * @phpstan-return array<int, int[]>
+     * @phpstan-return CmapSegmentType
      */
     private function buildCmapSegments(): array
     {
@@ -248,7 +283,7 @@ class TTFParser extends FileHandler
 
     private function buildFont(): string
     {
-        $tags = \array_filter(self::TAG_NAMES, fn (string $tag): bool => isset($this->tables[$tag]));
+        $tags = \array_filter(self::TAGS_NAME, fn (string $tag): bool => isset($this->tables[$tag]));
         $tagsCount = \count($tags);
         $offset = 12 + 16 * $tagsCount;
         foreach ($tags as $tag) {
@@ -284,7 +319,7 @@ class TTFParser extends FileHandler
         $high = 0xB1B0 + ($a[1] ^ 0xFFFF);
         $low = 0xAFBA + ($a[2] ^ 0xFFFF) + 1;
         $checkSumAdjustment = \pack('nn', $high + ($low >> 16), $low);
-        $this->tables['head']['data'] = \substr_replace($this->tables['head']['data'], $checkSumAdjustment, 8, 4);
+        $this->tables[self::TAG_HEAD]['data'] = \substr_replace($this->tables[self::TAG_HEAD]['data'], $checkSumAdjustment, 8, 4);
 
         $font = $offsetTable;
         foreach ($tags as $tag) {
@@ -297,7 +332,7 @@ class TTFParser extends FileHandler
     private function buildGlyf(): void
     {
         $data = '';
-        $tableOffset = $this->tables['glyf']['offset'];
+        $tableOffset = $this->tables[self::TAG_GLYF]['offset'];
         foreach ($this->subsettedGlyphs as $id) {
             $glyph = $this->glyphs[$id];
             $this->seek($tableOffset + $glyph['offset']);
@@ -311,15 +346,15 @@ class TTFParser extends FileHandler
             }
             $data .= $glyphData;
         }
-        $this->setTable('glyf', $data);
+        $this->setTable(self::TAG_GLYF, $data);
     }
 
     private function buildHhea(): void
     {
         $this->loadTable('hhea');
         $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
-        $data = \substr_replace($this->tables['hhea']['data'], \pack('n', $subsettedGlyphsCount), 4 + 15 * 2, 2);
-        $this->setTable('hhea', $data);
+        $data = \substr_replace($this->tables[self::TAG_HHEA]['data'], \pack('n', $subsettedGlyphsCount), 4 + 15 * 2, 2);
+        $this->setTable(self::TAG_HHEA, $data);
     }
 
     private function buildHmtx(): void
@@ -329,7 +364,7 @@ class TTFParser extends FileHandler
             $glyph = $this->glyphs[$id];
             $data .= \pack('nn', $glyph['width'], $glyph['lsb']);
         }
-        $this->setTable('hmtx', $data);
+        $this->setTable(self::TAG_HMTX, $data);
     }
 
     private function buildLoca(): void
@@ -344,20 +379,20 @@ class TTFParser extends FileHandler
             $offset += $this->glyphs[$id]['length'];
         }
         $data .= $callback($offset);
-        $this->setTable('loca', $data);
+        $this->setTable(self::TAG_LOCA, $data);
     }
 
     private function buildMaxp(): void
     {
         $this->loadTable('maxp');
         $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
-        $data = \substr_replace($this->tables['maxp']['data'], \pack('n', $subsettedGlyphsCount), 4, 2);
-        $this->setTable('maxp', $data);
+        $data = \substr_replace($this->tables[self::TAG_MAXP]['data'], \pack('n', $subsettedGlyphsCount), 4, 2);
+        $this->setTable(self::TAG_MAXP, $data);
     }
 
     private function buildPost(): void
     {
-        $this->seekTag('post');
+        $this->seekTag(self::TAG_POST);
         if ($this->glyphNames) {
             // version 2.0
             $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
@@ -382,7 +417,7 @@ class TTFParser extends FileHandler
             $data = "\x00\x03\x00\x00";
             $data .= $this->read(28);
         }
-        $this->setTable('post', $data);
+        $this->setTable(self::TAG_POST, $data);
     }
 
     private function checkSum(string $str): string
@@ -407,6 +442,9 @@ class TTFParser extends FileHandler
         return ($value & $mask) === $mask;
     }
 
+    /**
+     * @phpstan-param self::TAG_* $tag
+     */
     private function loadTable(string $tag): void
     {
         $this->seekTag($tag);
@@ -423,7 +461,7 @@ class TTFParser extends FileHandler
      */
     private function parseCmap(): void
     {
-        $this->seekTag('cmap');
+        $this->seekTag(self::TAG_CMAP);
         $this->skip(2); // version
         $numTables = $this->readUShort();
         $offset31 = 0;
@@ -444,7 +482,7 @@ class TTFParser extends FileHandler
         $idDelta = [];
         $idRangeOffset = [];
         $this->chars = [];
-        $this->seek($this->tables['cmap']['offset'] + $offset31);
+        $this->seek($this->tables[self::TAG_CMAP]['offset'] + $offset31);
         $format = $this->readUShort();
         if (4 !== $format) {
             throw $this->translator->format('error_table_format', $format);
@@ -502,7 +540,7 @@ class TTFParser extends FileHandler
      */
     private function parseGlyf(): void
     {
-        $tableOffset = $this->tables['glyf']['offset'];
+        $tableOffset = $this->tables[self::TAG_GLYF]['offset'];
         foreach ($this->glyphs as &$glyph) {
             if ($glyph['length'] > 0) {
                 $this->seek($tableOffset + $glyph['offset']);
@@ -541,7 +579,7 @@ class TTFParser extends FileHandler
      */
     private function parseHead(): void
     {
-        $this->seekTag('head');
+        $this->seekTag(self::TAG_HEAD);
         $this->skip(12); // version, fontRevision, checkSumAdjustment
         $magicNumber = $this->readULong();
         if (0x5F0F3CF5 !== $magicNumber) {
@@ -563,7 +601,7 @@ class TTFParser extends FileHandler
      */
     private function parseHhea(): void
     {
-        $this->seekTag('hhea');
+        $this->seekTag(self::TAG_HHEA);
         $this->skip(34);
         $this->numberOfHMetrics = $this->readUShort();
     }
@@ -573,7 +611,7 @@ class TTFParser extends FileHandler
      */
     private function parseHmtx(): void
     {
-        $this->seekTag('hmtx');
+        $this->seekTag(self::TAG_HMTX);
         $this->glyphs = [];
         $width = 0;
         for ($i = 0; $i < $this->numberOfHMetrics; ++$i) {
@@ -606,7 +644,7 @@ class TTFParser extends FileHandler
      */
     private function parseLoca(): void
     {
-        $this->seekTag('loca');
+        $this->seekTag(self::TAG_LOCA);
 
         $offsets = [];
         $callback = 0 === $this->indexToLocFormat
@@ -632,7 +670,7 @@ class TTFParser extends FileHandler
      */
     private function parseMaxp(): void
     {
-        $this->seekTag('maxp');
+        $this->seekTag(self::TAG_MAXP);
         $this->skip(4);
         $this->numGlyphs = $this->readUShort();
     }
@@ -642,8 +680,8 @@ class TTFParser extends FileHandler
      */
     private function parseName(): void
     {
-        $this->seekTag('name');
-        $tableOffset = $this->tables['name']['offset'];
+        $this->seekTag(self::TAG_NAME);
+        $tableOffset = $this->tables[self::TAG_NAME]['offset'];
         $this->postScriptName = '';
         $this->skip(2); // format
         $count = $this->readUShort();
@@ -681,6 +719,7 @@ class TTFParser extends FileHandler
         $this->skip(6); // searchRange, entrySelector, rangeShift
         $this->tables = [];
         for ($i = 0; $i < $numTables; ++$i) {
+            /** @phpstan-var self::TAG_* $tag */
             $tag = $this->read(4);
             $checkSum = $this->read(4);
             $offset = $this->readULong();
@@ -699,7 +738,7 @@ class TTFParser extends FileHandler
      */
     private function parseOS2(): void
     {
-        $this->seekTag('OS/2');
+        $this->seekTag(self::TAG_OS2);
         $version = $this->readUShort();
         $this->skip(6); // xAvgCharWidth, usWeightClass, usWidthClass
         $fsType = $this->readUShort();
@@ -723,7 +762,7 @@ class TTFParser extends FileHandler
      */
     private function parsePost(): void
     {
-        $this->seekTag('post');
+        $this->seekTag(self::TAG_POST);
         $version = $this->readULong();
         $this->italicAngle = $this->readShort();
         $this->skip(2); // skip decimal part
@@ -778,6 +817,9 @@ class TTFParser extends FileHandler
         return $this->unpackInt('n', 2);
     }
 
+    /**
+     * @phpstan-param self::TAG_* $tag
+     */
     private function seekTag(string $tag): void
     {
         if (!isset($this->tables[$tag])) {
@@ -786,6 +828,9 @@ class TTFParser extends FileHandler
         $this->seek($this->tables[$tag]['offset']);
     }
 
+    /**
+     * @phpstan-param self::TAG_* $tag
+     */
     private function setTable(string $tag, string $data): void
     {
         $length = \strlen($data);
