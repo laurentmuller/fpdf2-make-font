@@ -62,6 +62,7 @@ $rules = [
 $finder = Finder::create()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
+    ->notPath('Legacy')
     ->notPath('sources')
     ->notPath('targets')
     ->append([

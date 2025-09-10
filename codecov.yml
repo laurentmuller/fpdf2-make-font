@@ -1,2 +1,3 @@
 ignore:
     - src/makeFont.php
+    - tests/Legacy

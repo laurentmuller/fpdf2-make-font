@@ -271,11 +271,11 @@ class FontMaker
             if (self::NOT_DEF === $value['name']) {
                 continue;
             }
-            if (isset($cw[$value['name']])) {
-                $widths[$index] = $cw[$value['name']];
-            } else {
+            if (!isset($cw[$value['name']])) {
                 $this->warning(\sprintf($this->trans('warning_character_missing'), $value['name']));
+                continue;
             }
+            $widths[$index] = $cw[$value['name']];
         }
         $font['Widths'] = $widths;
 
@@ -338,7 +338,7 @@ class FontMaker
 
         $data['desc'] = $this->makeFontDescriptor($font);
         $data['cw'] = $font['Widths'];
-        $data['uw'] = $this->makeUnicode($map);
+        $data['uv'] = $this->makeUnicode($map);
         if (self::DEFAULT_ENCODING !== $encoding) {
             $diff = $this->makeFontEncoding($map);
             if ('' !== $diff) {
@@ -348,7 +348,7 @@ class FontMaker
 
         /** @phpstan-var non-empty-string $output */
         $output = \json_encode($data, \JSON_FORCE_OBJECT | \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
-        $this->saveToFile($file, $output, 't');
+        $this->saveToFile($file, $output, '');
     }
 
     /**
@@ -378,14 +378,14 @@ class FontMaker
         }
 
         return [
-            'flags' => $flags,
-            'ascent' => $font['Ascender'] ?? 0,
-            'descent' => $font['Descender'] ?? 0,
-            'capHeight' => $font['CapHeight'] ?? $font['Ascender'] ?? 0,
-            'italicAngle' => $font['ItalicAngle'],
-            'missingWidth' => $font['MissingWidth'],
-            'stemV' => $stemv,
-            'fontBBox' => $font['FontBBox'],
+            'Flags' => $flags,
+            'Ascent' => $font['Ascender'] ?? 0,
+            'Descent' => $font['Descender'] ?? 0,
+            'CapHeight' => $font['CapHeight'] ?? $font['Ascender'] ?? 0,
+            'ItalicAngle' => $font['ItalicAngle'],
+            'MissingWidth' => $font['MissingWidth'],
+            'StemV' => $stemv,
+            'FontBBox' => $font['FontBBox'],
         ];
     }
 

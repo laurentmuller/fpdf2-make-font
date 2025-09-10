@@ -6,6 +6,7 @@ parameters:
         - tests
 
     excludePaths:
+        - tests/Legacy/*
         - vendor
 
     type_coverage:
