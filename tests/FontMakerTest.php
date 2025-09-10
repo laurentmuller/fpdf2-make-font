@@ -263,9 +263,9 @@ class FontMakerTest extends TestCase
     private function compareFont(string $name): void
     {
         $sourceFile = $this->sources . $name . '.php';
-        $targetFile = $this->targets . $name . '.php';
-        $source = $this->load($sourceFile);
-        $target = $this->load($targetFile);
+        $targetFile = $this->targets . $name . '.json';
+        $source = $this->loadSource($sourceFile);
+        $target = $this->loadTarget($targetFile);
         self::assertArrayIsEqualToArrayIgnoringListOfKeys($source, $target, self::IGNORED_KEY);
     }
 
@@ -286,14 +286,38 @@ class FontMakerTest extends TestCase
     /**
      * @phpstan-return array<string, mixed>
      */
-    private function load(string $file): array
+    private function loadSource(string $file): array
     {
         if (!\file_exists($file)) {
             self::fail('File not found: ' . $file);
         }
-        include $file;
 
-        /** @phpstan-var array<string, mixed> */
-        return \get_defined_vars();
+        include $file;
+        /** @phpstan-var array{cw: array, desc: array, ...<string, mixed>} $source */
+        $source = \get_defined_vars(); // @phpstan-ignore-line
+        $source['cw'] = \array_values($source['cw']);
+        \ksort($source);
+        \ksort($source['desc']);
+
+        return $source;
+    }
+
+    /**
+     * @phpstan-return array<string, mixed>
+     */
+    private function loadTarget(string $file): array
+    {
+        if (!\file_exists($file)) {
+            self::fail('File not found: ' . $file);
+        }
+
+        $content = \file_get_contents($file);
+        self::assertIsString($content);
+        /** @phpstan-var array{cw: array, desc: array, ...<string, mixed>} $source */
+        $source = \json_decode(json: $content, associative: true, flags: \JSON_OBJECT_AS_ARRAY); // @phpstan-ignore-line
+        \ksort($source);
+        \ksort($source['desc']);
+
+        return $source;
     }
 }
