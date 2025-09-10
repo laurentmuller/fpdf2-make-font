@@ -63,13 +63,11 @@ $finder = Finder::create()
     ->in(__DIR__ . '/src')
     ->in(__DIR__ . '/tests')
     ->notPath('Legacy')
-    ->notPath('sources')
     ->notPath('targets')
     ->append([
         __FILE__,
         __DIR__ . '/rector.php',
         __DIR__ . '/create_phar.php',
-        __DIR__ . '/ui/make_font.php',
     ]);
 
 $config = new Config();

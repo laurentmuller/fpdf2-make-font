@@ -6,7 +6,6 @@ finder:
     exclude:
         - "vendor"
         - "tests/Legacy"
-        - "tests/sources"
         - "tests/targets"
     name: "*.php"
 enabled:

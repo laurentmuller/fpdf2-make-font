@@ -26,7 +26,6 @@ return RectorConfig::configure()
     ])->withSkip([
         PreferPHPUnitThisCallRector::class,
         __DIR__ . '/tests/Legacy',
-        __DIR__ . '/tests/sources',
         __DIR__ . '/tests/targets',
     ])->withSets([
         // global

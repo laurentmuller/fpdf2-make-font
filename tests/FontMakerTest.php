@@ -13,6 +13,8 @@ declare(strict_types=1);
 
 namespace fpdf\Tests;
 
+require __DIR__ . '/Legacy/makefont.php';
+
 use fpdf\FontMaker;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
@@ -21,34 +23,33 @@ class FontMakerTest extends TestCase
 {
     private const IGNORED_KEY = ['file', 'originalsize'];
 
-    private string $fonts;
-    private string $sources;
-    private string $targets;
+    private string $fontPath;
+    private string $targetPath;
 
     #[\Override]
     protected function setUp(): void
     {
-        $this->fonts = __DIR__ . '/fonts/';
-        $this->sources = __DIR__ . '/sources/';
-        $this->targets = __DIR__ . '/targets/';
-
-        if (!\is_dir($this->targets)) {
-            \mkdir($this->targets);
+        $this->fontPath = __DIR__ . '/fonts/';
+        $this->targetPath = __DIR__ . '/targets/';
+        if (!\is_dir($this->targetPath)) {
+            \mkdir($this->targetPath);
         }
-        \chdir($this->targets);
+        \chdir($this->targetPath);
     }
 
     public function testComic(): void
     {
         $name = 'ComicNeue-BoldItalic';
-        $this->generateFont($name);
+        $this->generateOldFont($name);
+        $this->generateNewFont($name);
         $this->compareFont($name);
     }
 
     public function testEmbedNotSubset(): void
     {
         $name = 'helvetica_no_subset';
-        $this->generateFont(name: $name, subset: false);
+        $this->generateOldFont(name: $name, subset: false);
+        $this->generateNewFont(name: $name, subset: false);
         $this->compareFont($name);
     }
 
@@ -57,20 +58,22 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Table not found: head.');
         $name = 'empty_tables';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testFixedPitch(): void
     {
         $name = 'FixedPitch';
-        $file = $this->generateFont(name: $name, ext: 'pfb');
-        self::assertFileExists($file);
+        $this->generateOldFont(name: $name);
+        $this->generateNewFont(name: $name);
+        $this->compareFont($name);
     }
 
     public function testFontType1(): void
     {
         $name = 'FontType1';
-        $this->generateFont(name: $name, ext: 'pfb');
+        $this->generateOldFont(name: $name, ext: 'pfb');
+        $this->generateNewFont(name: $name, ext: 'pfb');
         $this->compareFont($name);
     }
 
@@ -79,7 +82,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessageMatches('/^File not found:.*afm_not_found.afm.$/');
         $name = 'afm_not_found';
-        $this->generateFont(name: $name, ext: 'pfb');
+        $this->generateNewFont(name: $name, ext: 'pfb');
     }
 
     public function testFontType1Empty(): void
@@ -87,20 +90,20 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessageMatches('/^File empty or not readable:.*empty.afm.$/');
         $name = 'empty';
-        $this->generateFont(name: $name, ext: 'pfb');
+        $this->generateNewFont(name: $name, ext: 'pfb');
     }
 
     public function testFontType1NoAscender(): void
     {
         $name = 'FontNoAscender';
-        $file = $this->generateFont(name: $name, ext: 'pfb');
+        $file = $this->generateNewFont(name: $name, ext: 'pfb');
         self::assertFileExists($file);
     }
 
     public function testFontType1NoDescender(): void
     {
         $name = 'FontNoDescender';
-        $file = $this->generateFont(name: $name, ext: 'pfb');
+        $file = $this->generateNewFont(name: $name, ext: 'pfb');
         self::assertFileExists($file);
     }
 
@@ -109,7 +112,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Font name missing in AFM file.');
         $name = 'no_name';
-        $this->generateFont(name: $name, ext: 'pfb');
+        $this->generateNewFont(name: $name, ext: 'pfb');
     }
 
     public function testGetEncodings(): void
@@ -121,14 +124,16 @@ class FontMakerTest extends TestCase
     public function testHelvetica(): void
     {
         $name = 'helvetica';
-        $this->generateFont(name: $name, embed: false);
+        $this->generateOldFont(name: $name, embed: false);
+        $this->generateNewFont(name: $name, embed: false);
         $this->compareFont($name);
     }
 
     public function testHelvetica1258(): void
     {
         $name = 'helvetica1258';
-        $this->generateFont(name: $name, encoding: 'cp1258', embed: false);
+        $this->generateOldFont(name: $name, encoding: 'cp1258', embed: false);
+        $this->generateNewFont(name: $name, encoding: 'cp1258', embed: false);
         $this->compareFont($name);
     }
 
@@ -137,7 +142,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessageMatches('/^File not found:.*fake.map.$/');
         $name = 'times';
-        $this->generateFont(name: $name, encoding: 'fake');
+        $this->generateNewFont(name: $name, encoding: 'fake');
     }
 
     public function testInvalidExtension(): void
@@ -163,7 +168,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Incorrect magic number: 0xFFFFFFFF.');
         $name = 'invalid_magic_number';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testInvalidMarker(): void
@@ -171,7 +176,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Font file is not a valid binary Type1.');
         $name = 'invalid_marker';
-        $this->generateFont(name: $name, ext: 'pfb');
+        $this->generateNewFont(name: $name, ext: 'pfb');
     }
 
     public function testInvalidOttoFont(): void
@@ -179,7 +184,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('OpenType font based on PostScript outlines is not supported.');
         $name = 'otto_header';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testInvalidPostScriptName(): void
@@ -187,7 +192,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('PostScript name not found.');
         $name = 'invalid_post_script_name';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testInvalidTableFormat(): void
@@ -195,7 +200,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Invalid table format: 255.');
         $name = 'invalid_table_format';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testInvalidVersion(): void
@@ -203,7 +208,7 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Unrecognized file version: 0xABCDEFFF.');
         $name = 'invalid_version';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
     }
 
     public function testLocale(): void
@@ -222,65 +227,87 @@ class FontMakerTest extends TestCase
         self::expectException(MakeFontException::class);
         self::expectExceptionMessage('Font license does not allow embedding.');
         $name = 'not_embeddable';
-        $this->generateFont($name);
+        $this->generateNewFont($name);
+    }
+
+    public function testNotFixedPitch(): void
+    {
+        $name = 'NotFixedPitch';
+        $file = $this->generateNewFont(name: $name, ext: 'pfb');
+        self::assertFileExists($file);
     }
 
     public function testRobotoRegular(): void
     {
         $name = 'Roboto-Regular';
-        $this->generateFont($name);
+        $this->generateOldFont($name);
+        $this->generateNewFont($name);
         $this->compareFont($name);
     }
 
     public function testRobotoThin(): void
     {
         $name = 'Roboto-Thin';
-        $this->generateFont($name);
+        $this->generateOldFont($name);
+        $this->generateNewFont($name);
         $this->compareFont($name);
     }
 
     public function testRussian(): void
     {
         $name = 'russian';
-        $this->generateFont(name: $name, ext: 'otf', encoding: 'KOI8-R');
+        $this->generateOldFont(name: $name, ext: 'otf', encoding: 'KOI8-R');
+        $this->generateNewFont(name: $name, ext: 'otf', encoding: 'KOI8-R');
         $this->compareFont($name);
     }
 
     public function testStdVW(): void
     {
         $name = 'StdVW';
-        $file = $this->generateFont(name: $name, ext: 'pfb');
+        $file = $this->generateNewFont(name: $name, ext: 'pfb');
         self::assertFileExists($file);
     }
 
     public function testThai(): void
     {
         $name = 'thai';
-        $this->generateFont(name: $name, encoding: 'cp874');
+        $this->generateOldFont(name: $name, encoding: 'cp874');
+        $this->generateNewFont(name: $name, encoding: 'cp874');
         $this->compareFont($name);
     }
 
     private function compareFont(string $name): void
     {
-        $sourceFile = $this->sources . $name . '.php';
-        $targetFile = $this->targets . $name . '.json';
-        $source = $this->loadSource($sourceFile);
-        $target = $this->loadTarget($targetFile);
-        self::assertArrayIsEqualToArrayIgnoringListOfKeys($source, $target, self::IGNORED_KEY);
+        $sourceFile = $this->targetPath . $name . '.php';
+        $targetFile = $this->targetPath . $name . '.json';
+        $sourceContent = $this->loadSource($sourceFile);
+        $targetContent = $this->loadTarget($targetFile);
+        self::assertArrayIsEqualToArrayIgnoringListOfKeys($sourceContent, $targetContent, self::IGNORED_KEY);
     }
 
-    private function generateFont(
+    private function generateNewFont(
         string $name,
         string $ext = 'ttf',
         string $encoding = FontMaker::DEFAULT_ENCODING,
         bool $embed = true,
         bool $subset = true
     ): string {
-        $fontFile = $this->fonts . $name . '.' . $ext;
+        $fontFile = $this->fontPath . $name . '.' . $ext;
         $fontMaker = new FontMaker();
         $fontMaker->makeFont(fontFile: $fontFile, encoding: $encoding, embed: $embed, subset: $subset);
 
         return $fontFile;
+    }
+
+    private function generateOldFont(
+        string $name,
+        string $ext = 'ttf',
+        string $encoding = FontMaker::DEFAULT_ENCODING,
+        bool $embed = true,
+        bool $subset = true
+    ): void {
+        $fontFile = $this->fontPath . $name . '.' . $ext;
+        MakeFont($fontFile, $encoding, $embed, $subset); // @phpstan-ignore-line function.notFound
     }
 
     /**
@@ -293,9 +320,11 @@ class FontMakerTest extends TestCase
         }
 
         include $file;
-        /** @phpstan-var array{cw: array, desc: array, ...<string, mixed>} $source */
-        $source = \get_defined_vars(); // @phpstan-ignore-line
+        /** @phpstan-var array{cw: array<string, int>, desc: array<string, string>, ...<string, mixed>} $source */
+        $source = \get_defined_vars();
         $source['cw'] = \array_values($source['cw']);
+        $fontBBox = \substr($source['desc']['FontBBox'], 1, -1);
+        $source['desc']['FontBBox'] = \array_map('intval', \explode(' ', $fontBBox));
         \ksort($source);
         \ksort($source['desc']);
 
@@ -313,8 +342,8 @@ class FontMakerTest extends TestCase
 
         $content = \file_get_contents($file);
         self::assertIsString($content);
-        /** @phpstan-var array{cw: array, desc: array, ...<string, mixed>} $source */
-        $source = \json_decode(json: $content, associative: true, flags: \JSON_OBJECT_AS_ARRAY); // @phpstan-ignore-line
+        /** @phpstan-var array{cw: array<string, int>, desc: array<string, mixed>, ...<string, mixed>} $source */
+        $source = \json_decode(json: $content, associative: true, flags: \JSON_OBJECT_AS_ARRAY);
         \ksort($source);
         \ksort($source['desc']);
 

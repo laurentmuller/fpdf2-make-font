@@ -331,7 +331,7 @@ class FontMaker
             } else {
                 $data['originalsize'] = $font['OriginalSize'];
                 if ($subset) {
-                    $data['originalsize'] = true;
+                    $data['subsetted'] = true;
                 }
             }
         }
