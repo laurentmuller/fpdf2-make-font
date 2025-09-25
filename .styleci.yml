@@ -16,3 +16,4 @@ disabled:
     - native_function_invocation_symfony
     - concat_without_spaces
     - phpdoc_to_comment
+    - function_declaration
