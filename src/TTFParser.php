@@ -283,7 +283,7 @@ class TTFParser extends FileHandler
 
     private function buildFont(): string
     {
-        $tags = \array_filter(self::TAGS_NAME, fn (string $tag): bool => isset($this->tables[$tag]));
+        $tags = \array_filter(self::TAGS_NAME, fn(string $tag): bool => isset($this->tables[$tag]));
         $tagsCount = \count($tags);
         $offset = 12 + 16 * $tagsCount;
         foreach ($tags as $tag) {
@@ -372,8 +372,8 @@ class TTFParser extends FileHandler
         $data = '';
         $offset = 0;
         $callback = 0 === $this->indexToLocFormat
-            ? static fn (int $offset): string => \pack('n', $offset / 2)
-            : static fn (int $offset): string => \pack('N', $offset);
+            ? static fn(int $offset): string => \pack('n', $offset / 2)
+            : static fn(int $offset): string => \pack('N', $offset);
         foreach ($this->subsettedGlyphs as $id) {
             $data .= $callback($offset);
             $offset += $this->glyphs[$id]['length'];
@@ -648,8 +648,8 @@ class TTFParser extends FileHandler
 
         $offsets = [];
         $callback = 0 === $this->indexToLocFormat
-            ? fn (): int => 2 * $this->readUShort()  // short format
-            : fn (): int => $this->readULong(); // long format
+            ? fn(): int => 2 * $this->readUShort()  // short format
+            : fn(): int => $this->readULong(); // long format
         for ($i = 0; $i <= $this->numGlyphs; ++$i) {
             $offsets[] = $callback();
         }
