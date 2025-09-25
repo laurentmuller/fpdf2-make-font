@@ -1,6 +1,6 @@
 risky: true
 version: 8.2
-preset: symfony2023
+preset: symfony2025
 monolithic: true
 finder:
     exclude:
