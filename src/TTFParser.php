@@ -26,8 +26,8 @@ namespace fpdf;
  *    components? : array<int, int>}
  * @phpstan-type TableType array{
  *    offset: int,
- *    length: int,
  *    data: string,
+ *    length: int,
  *    checkSum: string}
  * @phpstan-type CmapType array{
  *    0: int[],
@@ -161,16 +161,22 @@ class TTFParser extends FileHandler
         }
     }
 
+    /**
+     * @psalm-suppress UnsupportedPropertyReferenceUsage
+     */
     private function addGlyph(int $id): void
     {
-        if (0 === $this->glyphs[$id]['ssid']) {
-            $this->glyphs[$id]['ssid'] = $this->getSubsettedGlyphsCount();
-            $this->subsettedGlyphs[] = $id;
-            if (isset($this->glyphs[$id]['components'])) {
-                foreach ($this->glyphs[$id]['components'] as $cid) {
-                    $this->addGlyph($cid);
-                }
-            }
+        $glyph = &$this->glyphs[$id];
+        if (0 !== $glyph['ssid']) {
+            return;
+        }
+        $glyph['ssid'] = $this->getSubsettedGlyphsCount();
+        $this->subsettedGlyphs[] = $id;
+        if (!isset($glyph['components'])) {
+            return;
+        }
+        foreach ($glyph['components'] as $cid) {
+            $this->addGlyph($cid);
         }
     }
 
@@ -281,17 +287,21 @@ class TTFParser extends FileHandler
         return $segments;
     }
 
+    /**
+     * @psalm-suppress UnsupportedPropertyReferenceUsage
+     */
     private function buildFont(): string
     {
         $tags = \array_filter(self::TAGS_NAME, fn(string $tag): bool => isset($this->tables[$tag]));
         $tagsCount = \count($tags);
         $offset = 12 + 16 * $tagsCount;
         foreach ($tags as $tag) {
-            if ('' === $this->tables[$tag]['data']) {
+            $table = &$this->tables[$tag];
+            if ('' === $table['data']) {
                 $this->loadTable($tag);
             }
-            $this->tables[$tag]['offset'] = $offset;
-            $offset += \strlen($this->tables[$tag]['data']);
+            $table['offset'] = $offset;
+            $offset += \strlen($table['data']);
         }
 
         // build offset table
@@ -351,7 +361,7 @@ class TTFParser extends FileHandler
 
     private function buildHhea(): void
     {
-        $this->loadTable('hhea');
+        $this->loadTable(self::TAG_HHEA);
         $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
         $data = \substr_replace($this->tables[self::TAG_HHEA]['data'], \pack('n', $subsettedGlyphsCount), 4 + 15 * 2, 2);
         $this->setTable(self::TAG_HHEA, $data);
@@ -384,7 +394,7 @@ class TTFParser extends FileHandler
 
     private function buildMaxp(): void
     {
-        $this->loadTable('maxp');
+        $this->loadTable(self::TAG_MAXP);
         $subsettedGlyphsCount = $this->getSubsettedGlyphsCount();
         $data = \substr_replace($this->tables[self::TAG_MAXP]['data'], \pack('n', $subsettedGlyphsCount), 4, 2);
         $this->setTable(self::TAG_MAXP, $data);
@@ -838,8 +848,11 @@ class TTFParser extends FileHandler
         if ($padding > 0) {
             $data = \str_pad($data, $length + 4 - $padding, "\x00");
         }
-        $this->tables[$tag]['data'] = $data;
-        $this->tables[$tag]['length'] = $length;
-        $this->tables[$tag]['checkSum'] = $this->checkSum($data);
+        $this->tables[$tag] = [
+            'offset' => 0,
+            'data' => $data,
+            'length' => $length,
+            'checkSum' => $this->checkSum($data),
+        ];
     }
 }
