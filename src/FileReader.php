@@ -23,7 +23,6 @@ class FileReader extends FileHandle
         parent::__construct($file, 'r' . $mode, $translator);
     }
 
-
     public function read(int $length): string
     {
         return $length > 0 ? (string) \fread($this->getHandle(), $length) : '';
@@ -52,8 +51,6 @@ class FileReader extends FileHandle
         return $values[1];
     }
 
-
-
     protected function readShort(): int
     {
         $value = $this->readUShort();
@@ -73,5 +70,4 @@ class FileReader extends FileHandle
     {
         return $this->unpackInt('n', 2);
     }
-
 }

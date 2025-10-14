@@ -23,6 +23,6 @@ class FileWriterTest extends TestCase
     {
         $this->expectException(MakeFontException::class);
         self::expectExceptionMessage('Unable to open file: ///.txt.');
-        new FileWriter("///.txt");
+        new FileWriter('///.txt');
     }
 }

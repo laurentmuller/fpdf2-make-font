@@ -420,7 +420,7 @@ class TTFParser extends FileReader
     private function getCheckSumAdjustment(string $offsetTable, array $tables): string
     {
         $cs = $this->checkSum($offsetTable);
-        $cs .=  \implode('', \array_column($tables, 'checkSum'));
+        $cs .= \implode('', \array_column($tables, 'checkSum'));
 
         /** @var int[] $values */
         $values = \unpack('n2', $this->checkSum($cs));
@@ -569,7 +569,7 @@ class TTFParser extends FileReader
     {
         $tableOffset = $this->tables[self::TAG_GLYF]['offset'];
         foreach ($this->glyphs as &$glyph) {
-            if ($glyph['length'] === 0) {
+            if (0 === $glyph['length']) {
                 continue;
             }
             $this->seek($tableOffset + $glyph['offset']);
