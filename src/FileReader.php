@@ -13,33 +13,16 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-class FileHandler
+class FileReader extends FileHandle
 {
-    /**
-     * @phpstan-var resource|closed-resource
-     */
-    private mixed $handle;
-
-    public function __construct(string $file, string $mode = 'r', Translator $translator = new Translator())
-    {
-        $handle = \fopen($file, $mode);
-        if (!\is_resource($handle)) {
-            throw $translator->format('error_file_open', $file);
-        }
-        $this->handle = $handle;
+    public function __construct(
+        string $file,
+        string $mode = '',
+        Translator $translator = new Translator()
+    ) {
+        parent::__construct($file, 'r' . $mode, $translator);
     }
 
-    public function __destruct()
-    {
-        $this->close();
-    }
-
-    public function close(): void
-    {
-        if (\is_resource($this->handle)) {
-            \fclose($this->handle);
-        }
-    }
 
     public function read(int $length): string
     {
@@ -69,17 +52,26 @@ class FileHandler
         return $values[1];
     }
 
-    public function write(string $data): void
+
+
+    protected function readShort(): int
     {
-        \fwrite($this->getHandle(), $data);
+        $value = $this->readUShort();
+        if ($value >= 0x008000) {
+            $value -= 0x010000;
+        }
+
+        return $value;
     }
 
-    /**
-     * @return resource
-     */
-    protected function getHandle(): mixed
+    protected function readULong(): int
     {
-        /** @psalm-var resource */
-        return $this->handle;
+        return $this->unpackInt('N', 4);
     }
+
+    protected function readUShort(): int
+    {
+        return $this->unpackInt('n', 2);
+    }
+
 }

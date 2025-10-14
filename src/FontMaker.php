@@ -184,7 +184,7 @@ class FontMaker
      */
     private function getFontFromTrueType(string $fontFile, bool $embed, array $map, bool $subset): array
     {
-        $parser = new TTFParser($fontFile, $this->translator);
+        $parser = new TTFParser(file: $fontFile, translator: $this->translator);
         $parser->parse();
 
         $font = $this->createEmptyFont();
@@ -348,7 +348,7 @@ class FontMaker
 
         /** @phpstan-var non-empty-string $output */
         $output = \json_encode($data, \JSON_FORCE_OBJECT | \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
-        $this->saveToFile($file, $output, '');
+        $this->saveToFile($file, $output);
     }
 
     /**
@@ -404,9 +404,9 @@ class FontMaker
                 continue;
             }
             if ($ch !== $last + 1) {
-                $output .= $ch . ' ';
+                $output .= \sprintf('%d ', $ch);
             }
-            $output .= '/' . $map[$ch]['name'] . ' ';
+            $output .= \sprintf('/%s ', $map[$ch]['name']);
             $last = $ch;
         }
 
@@ -513,7 +513,7 @@ class FontMaker
     /**
      * @psalm-return positive-int
      */
-    private function readSegment(FileHandler $handler): int
+    private function readSegment(FileReader $handler): int
     {
         $marker = $handler->unpackInt('C', 1);
         $handler->skip(1); // type
@@ -526,9 +526,9 @@ class FontMaker
         return $size;
     }
 
-    private function saveToFile(string $file, string $data, string $mode): void
+    private function saveToFile(string $file, string $data, string $mode = ''): void
     {
-        $handler = new FileHandler($file, 'w' . $mode);
+        $handler = new FileWriter($file, $mode);
         $handler->write($data);
         $handler->close();
     }
@@ -543,7 +543,7 @@ class FontMaker
      */
     private function updateSegments(string $fontFile, array &$font): void
     {
-        $handler = new FileHandler($fontFile, 'r');
+        $handler = new FileReader($fontFile);
 
         // read the first segment
         $size1 = $this->readSegment($handler);

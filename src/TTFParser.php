@@ -16,28 +16,28 @@ namespace fpdf;
 /**
  * Class to parse a TTF font.
  *
- * @phpstan-type GlyphType array{
+ * @phpstan-type GlyphType = array{
  *    name: string|int,
  *    width: int,
  *    lsb: int,
  *    length: int,
  *    offset: int,
  *    ssid: int,
- *    components? : array<int, int>}
- * @phpstan-type TableType array{
+ *    components?: array<int, int>}
+ * @phpstan-type TableType = array{
  *    offset: int,
- *    data: string,
  *    length: int,
+ *    data: string,
  *    checkSum: string}
- * @phpstan-type CmapType array{
+ * @phpstan-type CmapType = array{
  *    0: int[],
  *    1: int[],
  *    2: int[],
  *    3: int[],
  *    4: string}
- * @phpstan-type CmapSegmentType array<int, int[]>
+ * @phpstan-type CmapSegmentType = array<int, int[]>
  */
-class TTFParser extends FileHandler
+class TTFParser extends FileReader
 {
     private const TAG_CMAP = 'cmap';
     private const TAG_CVT = 'cvt';
@@ -97,11 +97,6 @@ class TTFParser extends FileHandler
     private array $subsettedGlyphs = [];
     /** @phpstan-var array<self::TAG_*, TableType> */
     private array $tables = [];
-
-    public function __construct(string $file, private readonly Translator $translator = new Translator())
-    {
-        parent::__construct(file: $file, translator: $this->translator);
-    }
 
     /**
      * Build the font definition.
@@ -287,56 +282,33 @@ class TTFParser extends FileHandler
         return $segments;
     }
 
-    /**
-     * @psalm-suppress UnsupportedPropertyReferenceUsage
-     */
     private function buildFont(): string
     {
-        $tags = \array_filter(self::TAGS_NAME, fn(string $tag): bool => isset($this->tables[$tag]));
-        $tagsCount = \count($tags);
-        $offset = 12 + 16 * $tagsCount;
-        foreach ($tags as $tag) {
-            $table = &$this->tables[$tag];
+        // filter tables
+        $tables = \array_intersect_key($this->tables, \array_flip(self::TAGS_NAME));
+        $offset = 12 + 16 * \count($tables);
+
+        // compute data
+        foreach ($tables as $tag => &$table) {
             if ('' === $table['data']) {
-                $this->loadTable($tag);
+                $table = $this->loadTable($tag);
             }
             $table['offset'] = $offset;
             $offset += \strlen($table['data']);
+            $this->tables[$tag] = $table;
         }
 
-        // build offset table
-        $entrySelector = 0;
-        $n = $tagsCount;
-        while (1 !== $n) {
-            $n >>= 1;
-            ++$entrySelector;
-        }
-        $searchRange = 16 * (1 << $entrySelector);
-        $rangeShift = 16 * $tagsCount - $searchRange;
-        $offsetTable = \pack('nnnnnn', 1, 0, $tagsCount, $searchRange, $entrySelector, $rangeShift);
-        foreach ($tags as $tag) {
-            $table = $this->tables[$tag];
-            $offsetTable .= $tag . $table['checkSum'] . \pack('NN', $table['offset'], $table['length']);
-        }
+        // compute offset table
+        $offsetTable = $this->getTableOffset($tables);
 
         // compute checkSumAdjustment (0xB1B0AFBA - font checkSum)
-        $s = $this->checkSum($offsetTable);
-        foreach ($tags as $tag) {
-            $s .= $this->tables[$tag]['checkSum'];
-        }
-        /** @var int[] $a */
-        $a = \unpack('n2', $this->checkSum($s));
-        $high = 0xB1B0 + ($a[1] ^ 0xFFFF);
-        $low = 0xAFBA + ($a[2] ^ 0xFFFF) + 1;
-        $checkSumAdjustment = \pack('nn', $high + ($low >> 16), $low);
+        $checkSumAdjustment = $this->getCheckSumAdjustment($offsetTable, $tables);
         $this->tables[self::TAG_HEAD]['data'] = \substr_replace($this->tables[self::TAG_HEAD]['data'], $checkSumAdjustment, 8, 4);
 
-        $font = $offsetTable;
-        foreach ($tags as $tag) {
-            $font .= $this->tables[$tag]['data'];
-        }
+        // data
+        $data = \implode('', \array_column($tables, 'data'));
 
-        return $font;
+        return $offsetTable . $data;
     }
 
     private function buildGlyf(): void
@@ -442,9 +414,47 @@ class TTFParser extends FileHandler
         return \pack('nn', $high + ($low >> 16), $low);
     }
 
+    /**
+     * @phpstan-param TableType[] $tables
+     */
+    private function getCheckSumAdjustment(string $offsetTable, array $tables): string
+    {
+        $cs = $this->checkSum($offsetTable);
+        $cs .=  \implode('', \array_column($tables, 'checkSum'));
+
+        /** @var int[] $values */
+        $values = \unpack('n2', $this->checkSum($cs));
+        $high = 0xB1B0 + ($values[1] ^ 0xFFFF);
+        $low = 0xAFBA + ($values[2] ^ 0xFFFF) + 1;
+
+        return \pack('nn', $high + ($low >> 16), $low);
+    }
+
     private function getSubsettedGlyphsCount(): int
     {
         return \count($this->subsettedGlyphs);
+    }
+    /**
+     * @phpstan-param array<string, TableType> $tables
+     */
+    private function getTableOffset(array $tables): string
+    {
+        $tagsCount = \count($tables);
+        $entrySelector = 0;
+        $n = $tagsCount;
+        while (1 !== $n) {
+            $n >>= 1;
+            ++$entrySelector;
+        }
+
+        $searchRange = 16 * (1 << $entrySelector);
+        $rangeShift = 16 * $tagsCount - $searchRange;
+        $offsetTable = \pack('nnnnnn', 1, 0, $tagsCount, $searchRange, $entrySelector, $rangeShift);
+        foreach ($tables as $tag => $table) {
+            $offsetTable .= $tag . $table['checkSum'] . \pack('NN', $table['offset'], $table['length']);
+        }
+
+        return $offsetTable;
     }
 
     private function isBitSet(int $value, int $mask): bool
@@ -454,16 +464,23 @@ class TTFParser extends FileHandler
 
     /**
      * @phpstan-param self::TAG_* $tag
+     *
+     * @phpstan-return TableType
+     *
+     * @psalm-suppress UnsupportedPropertyReferenceUsage
      */
-    private function loadTable(string $tag): void
+    private function loadTable(string $tag): array
     {
         $this->seekTag($tag);
-        $length = $this->tables[$tag]['length'];
+        $table = &$this->tables[$tag];
+        $length = $table['length'];
         $padding = $length % 4;
         if ($padding > 0) {
             $length += 4 - $padding;
         }
-        $this->tables[$tag]['data'] = $this->read($length);
+        $table['data'] = $this->read($length);
+
+        return $table;
     }
 
     /**
@@ -552,35 +569,37 @@ class TTFParser extends FileHandler
     {
         $tableOffset = $this->tables[self::TAG_GLYF]['offset'];
         foreach ($this->glyphs as &$glyph) {
-            if ($glyph['length'] > 0) {
-                $this->seek($tableOffset + $glyph['offset']);
-                if ($this->readShort() < 0) {
-                    // composite glyph
-                    $this->skip(8); // xMin, yMin, xMax, yMax
-                    $offset = 10;
-                    $components = [];
-                    do {
-                        $flags = $this->readUShort();
-                        $index = $this->readUShort();
-                        $components[$offset + 2] = $index;
-                        if ($this->isBitSet($flags, 1)) { // arg 1 and arg 2 are words
-                            $skip = 4;
-                        } else {
-                            $skip = 2;
-                        }
-                        if ($this->isBitSet($flags, 8)) { // scale present
-                            $skip += 2;
-                        } elseif ($this->isBitSet($flags, 64)) { // x and y scale
-                            $skip += 4;
-                        } elseif ($this->isBitSet($flags, 128)) { // two by two
-                            $skip += 8;
-                        }
-                        $this->skip($skip);
-                        $offset += 2 * 2 + $skip;
-                    } while ($flags & 32); // more components
-                    $glyph['components'] = $components;
-                }
+            if ($glyph['length'] === 0) {
+                continue;
             }
+            $this->seek($tableOffset + $glyph['offset']);
+            if ($this->readShort() >= 0) {
+                continue;
+            }
+            // composite glyph
+            $this->skip(8); // xMin, yMin, xMax, yMax
+            $offset = 10;
+            $components = [];
+            do {
+                $flags = $this->readUShort();
+                $index = $this->readUShort();
+                $components[$offset + 2] = $index;
+                if ($this->isBitSet($flags, 1)) { // arg 1 and arg 2 are words
+                    $skip = 4;
+                } else {
+                    $skip = 2;
+                }
+                if ($this->isBitSet($flags, 8)) { // scale present
+                    $skip += 2;
+                } elseif ($this->isBitSet($flags, 64)) { // x and y scale
+                    $skip += 4;
+                } elseif ($this->isBitSet($flags, 128)) { // two by two
+                    $skip += 8;
+                }
+                $this->skip($skip);
+                $offset += 2 * 2 + $skip;
+            } while ($flags & 32); // more components
+            $glyph['components'] = $components;
         }
     }
 
@@ -805,26 +824,6 @@ class TTFParser extends FileHandler
         foreach ($glyphNameIndex as $i => $index) {
             $this->glyphs[$i]['name'] = $index >= 258 ? $names[$index - 258] : $index;
         }
-    }
-
-    private function readShort(): int
-    {
-        $value = $this->readUShort();
-        if ($value >= 0x008000) {
-            $value -= 0x010000;
-        }
-
-        return $value;
-    }
-
-    private function readULong(): int
-    {
-        return $this->unpackInt('N', 4);
-    }
-
-    private function readUShort(): int
-    {
-        return $this->unpackInt('n', 2);
     }
 
     /**

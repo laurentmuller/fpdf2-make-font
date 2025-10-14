@@ -13,16 +13,16 @@ declare(strict_types=1);
 
 namespace fpdf\Tests;
 
-use fpdf\FileHandler;
+use fpdf\FileWriter;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
 
-class FileHandlerTest extends TestCase
+class FileWriterTest extends TestCase
 {
-    public function testFileHandlerNotFound(): void
+    public function testFileNotFound(): void
     {
         $this->expectException(MakeFontException::class);
-        self::expectExceptionMessage('Unable to open file: fake.txt.');
-        new FileHandler('fake.txt');
+        self::expectExceptionMessage('Unable to open file: ///.txt.');
+        new FileWriter("///.txt");
     }
 }
