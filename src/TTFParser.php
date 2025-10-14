@@ -434,6 +434,7 @@ class TTFParser extends FileReader
     {
         return \count($this->subsettedGlyphs);
     }
+
     /**
      * @phpstan-param array<string, TableType> $tables
      */
