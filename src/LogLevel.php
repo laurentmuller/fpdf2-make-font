@@ -20,7 +20,7 @@ enum LogLevel: int
     case WARNING = 1;
 
     /**
-     * Gets a value indicating if this level is higher than the given level
+     * Gets a value indicating if this level is higher than the given level.
      */
     public function isHigher(LogLevel $level): bool
     {
@@ -28,7 +28,7 @@ enum LogLevel: int
     }
 
     /**
-     * Gets a value indicating if this level is lower than the given level
+     * Gets a value indicating if this level is lower than the given level.
      */
     public function isLower(LogLevel $level): bool
     {
@@ -38,7 +38,7 @@ enum LogLevel: int
     /**
      * Gets the level that have the maximum value.
      */
-    public static function max(LogLevel ... $levels): LogLevel
+    public static function max(LogLevel ...$levels): LogLevel
     {
         $result = LogLevel::INFO;
         foreach ($levels as $level) {

@@ -20,7 +20,7 @@ readonly class Log implements \Stringable
      * @param LogLevel $level   the log level
      */
     public function __construct(
-        public string   $message,
+        public string $message,
         public LogLevel $level = LogLevel::INFO,
     ) {}
 
