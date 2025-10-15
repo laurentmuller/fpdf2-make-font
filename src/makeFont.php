@@ -49,6 +49,9 @@ try {
     $subset = (bool) ($argv[4] ?? true);
     $fontMaker = new FontMaker();
     $fontMaker->makeFont($fontFile, $encoding, $embed, $subset);
+    foreach ($fontMaker->getLogs() as $log) {
+        echo \sprintf("%s\n", $log);
+    }
 } catch (MakeFontException $e) {
     echo $e->getMessage();
 }

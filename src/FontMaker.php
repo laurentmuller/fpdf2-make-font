@@ -48,6 +48,8 @@ class FontMaker
     private const FONT_TYPE_1 = 'Type1';
     private const NOT_DEF = '.notdef';
 
+    /** @var Log[] */
+    private array $logs = [];
     private Translator $translator;
 
     public function __construct(string $locale = Translator::DEFAULT_LOCALE)
@@ -91,12 +93,23 @@ class FontMaker
         return $this->translator->getLocale();
     }
 
+    /**
+     * Gets the log entries.
+     *
+     * @return Log[]
+     */
+    public function getLogs(): array
+    {
+        return $this->logs;
+    }
+
     public function makeFont(
         string $fontFile,
         string $encoding = self::DEFAULT_ENCODING,
         bool $embed = true,
         bool $subset = true
     ): void {
+        $this->logs = [];
         if (!\file_exists($fontFile)) {
             throw $this->translator->format('error_file_not_found', $fontFile);
         }
@@ -455,15 +468,9 @@ class FontMaker
         return $data;
     }
 
-    private function message(string $message, string $severity = 'info'): void
+    private function message(string $message, LogLevel $level = LogLevel::INFO): void
     {
-        $severity = $this->trans($severity);
-
-        if (\PHP_SAPI === 'cli') {
-            echo "$severity: $message\n";
-        } else {
-            echo "$severity: $message<br>";
-        }
+        $this->logs[] = new Log($message, $level);
     }
 
     /**
@@ -562,6 +569,6 @@ class FontMaker
 
     private function warning(string $message): void
     {
-        $this->message($message, 'warning');
+        $this->message($message, LogLevel::WARNING);
     }
 }

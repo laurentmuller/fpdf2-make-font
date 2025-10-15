@@ -25,4 +25,18 @@ class FileWriterTest extends TestCase
         self::expectExceptionMessage('Unable to open file: ///.txt.');
         new FileWriter('///.txt');
     }
+
+    public function testWrite(): void
+    {
+        $file = __DIR__ . '/test.txt';
+
+        try {
+            $writer = new FileWriter($file);
+            $writer->write('test');
+            $writer->close();
+            self::expectNotToPerformAssertions();
+        } finally {
+            \unlink($file);
+        }
+    }
 }

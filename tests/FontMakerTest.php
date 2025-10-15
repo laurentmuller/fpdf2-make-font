@@ -121,6 +121,13 @@ class FontMakerTest extends TestCase
         self::assertContains(FontMaker::DEFAULT_ENCODING, $encodings);
     }
 
+    public function testGetLogs(): void
+    {
+        $maker = new FontMaker();
+        $logs = $maker->getLogs();
+        self::assertEmpty($logs);
+    }
+
     public function testHelvetica(): void
     {
         $name = 'helvetica';

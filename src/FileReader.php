@@ -28,6 +28,26 @@ class FileReader extends FileHandle
         return $length > 0 ? (string) \fread($this->getHandle(), $length) : '';
     }
 
+    public function readShort(): int
+    {
+        $value = $this->readUShort();
+        if ($value >= 0x008000) {
+            $value -= 0x010000;
+        }
+
+        return $value;
+    }
+
+    public function readULong(): int
+    {
+        return $this->unpackInt('N', 4);
+    }
+
+    public function readUShort(): int
+    {
+        return $this->unpackInt('n', 2);
+    }
+
     public function seek(int $offset, int $whence = \SEEK_SET): void
     {
         \fseek($this->getHandle(), $offset, $whence);
@@ -49,25 +69,5 @@ class FileReader extends FileHandle
         $values = (array) \unpack($format, $this->read($length));
 
         return $values[1];
-    }
-
-    protected function readShort(): int
-    {
-        $value = $this->readUShort();
-        if ($value >= 0x008000) {
-            $value -= 0x010000;
-        }
-
-        return $value;
-    }
-
-    protected function readULong(): int
-    {
-        return $this->unpackInt('N', 4);
-    }
-
-    protected function readUShort(): int
-    {
-        return $this->unpackInt('n', 2);
     }
 }

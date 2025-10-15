@@ -60,11 +60,13 @@ $rules = [
 ];
 
 $finder = Finder::create()
-    ->in(__DIR__ . '/src')
-    ->in(__DIR__ . '/tests')
-    ->notPath('Legacy')
-    ->notPath('targets')
-    ->append([
+    ->in([
+        __DIR__ . '/src',
+        __DIR__ . '/tests',
+    ])->notPath([
+        'Legacy',
+        'targets',
+    ])->append([
         __FILE__,
         __DIR__ . '/rector.php',
         __DIR__ . '/create_phar.php',
