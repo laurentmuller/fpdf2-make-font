@@ -209,12 +209,12 @@ class TranslatorTest extends TestCase
         ];
         yield [
             'info_compressed_generated',
-            'Définition du fichier de police compressé généré : value.',
+            'Définition du fichier compressé généré : value.',
             self::STR_VALUE,
         ];
         yield [
             'info_file_generated',
-            'Définition du fichier de polices généré : value.',
+            'Définition du fichier de police généré : value.',
             self::STR_VALUE,
         ];
         yield [
