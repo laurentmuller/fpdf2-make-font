@@ -16,7 +16,7 @@ namespace fpdf\Tests;
 use fpdf\LogLevel;
 use PHPUnit\Framework\TestCase;
 
-class LogLevelTest extends TestCase
+final class LogLevelTest extends TestCase
 {
     public function testIsHigher(): void
     {

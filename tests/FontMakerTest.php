@@ -19,7 +19,7 @@ use fpdf\FontMaker;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
 
-class FontMakerTest extends TestCase
+final class FontMakerTest extends TestCase
 {
     private const IGNORED_KEY = ['file', 'originalsize'];
 

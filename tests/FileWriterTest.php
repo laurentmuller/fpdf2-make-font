@@ -17,7 +17,7 @@ use fpdf\FileWriter;
 use fpdf\MakeFontException;
 use PHPUnit\Framework\TestCase;
 
-class FileWriterTest extends TestCase
+final class FileWriterTest extends TestCase
 {
     public function testFileNotFound(): void
     {

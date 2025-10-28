@@ -17,7 +17,7 @@ use fpdf\Translator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-class TranslatorTest extends TestCase
+final class TranslatorTest extends TestCase
 {
     private const INT_VALUE = 0x010203;
     private const STR_VALUE = 'value';

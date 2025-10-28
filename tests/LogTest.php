@@ -17,7 +17,7 @@ use fpdf\Log;
 use fpdf\LogLevel;
 use PHPUnit\Framework\TestCase;
 
-class LogTest extends TestCase
+final class LogTest extends TestCase
 {
     public function testLogDefault(): void
     {
