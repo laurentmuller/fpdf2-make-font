@@ -160,7 +160,6 @@ been created to generate fonts.
 [![SymfonyInsight](https://insight.symfony.com/projects/7f51544f-dfa3-4123-aed2-9c9dc8b4277f/mini.svg)](https://insight.symfony.com/projects/7f51544f-dfa3-4123-aed2-9c9dc8b4277f)
 [![Codacy](https://app.codacy.com/project/badge/Grade/4ee669849d9f4422ab57b0c1457ed82a)](https://app.codacy.com/gh/laurentmuller/fpdf2-make-font/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![PHP-Stan](https://img.shields.io/badge/PHPStan-Level%2010-brightgreen.svg?style=flat&logo=php)](https://phpstan.org/blog/find-bugs-in-your-code-without-writing-tests)
-[![Psalm](https://img.shields.io/badge/Psalm-Level%201-brightgreen.svg?style=flat)](https://psalm.dev/docs/running_psalm/installation/)
 [![CodeFactor](https://www.codefactor.io/repository/github/laurentmuller/fpdf2-make-font/badge)](https://www.codefactor.io/repository/github/laurentmuller/fpdf2-make-font)
 [![Codecov](https://codecov.io/gh/laurentmuller/fpdf2-make-font/graph/badge.svg?token=SNZ6DJ8W6N)](https://codecov.io/gh/laurentmuller/fpdf2-make-font)
 
