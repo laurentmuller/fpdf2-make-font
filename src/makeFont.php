@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-if (\PHP_VERSION_ID < 80200) { // @phpstan-ignore smaller.alwaysFalse
+if (\PHP_VERSION_ID < 80200) {
     echo 'Error: makeFont requires PHP 8.2 or newer.';
 
     return;

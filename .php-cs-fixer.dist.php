@@ -59,18 +59,26 @@ $rules = [
     'header_comment' => ['header' => $comment, 'location' => 'after_open'],
 ];
 
+$paths = [
+    __DIR__ . '/src',
+    __DIR__ . '/tests',
+];
+
+$files = [
+    __FILE__,
+    __DIR__ . '/rector.php',
+    __DIR__ . '/create_phar.php',
+];
+
+$skippedPaths = [
+    'Legacy',
+    'targets',
+];
+
 $finder = Finder::create()
-    ->in([
-        __DIR__ . '/src',
-        __DIR__ . '/tests',
-    ])->notPath([
-        'Legacy',
-        'targets',
-    ])->append([
-        __FILE__,
-        __DIR__ . '/rector.php',
-        __DIR__ . '/create_phar.php',
-    ]);
+    ->in($paths)
+    ->append($files)
+    ->notPath($skippedPaths);
 
 $config = new Config();
 

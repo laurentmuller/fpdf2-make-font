@@ -125,7 +125,7 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'warning_character_missing',
-            'Character \'value\' is missing.',
+            "Character 'value' is missing.",
             self::STR_VALUE,
         ];
     }
@@ -152,7 +152,7 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'error_file_open',
-            'Impossible d\'ouvrir le fichier : value.',
+            "Impossible d'ouvrir le fichier : value.",
             self::STR_VALUE,
         ];
         yield [
@@ -166,11 +166,11 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'error_invalid_type',
-            'Le fichier de polices n\'est pas un fichier binaire valide de type 1.',
+            "Le fichier de polices n'est pas un fichier binaire valide de type 1.",
         ];
         yield [
             'error_license',
-            'La licence de la police n\'autorise pas l\'intégration.',
+            "La licence de la police n'autorise pas l'intégration.",
         ];
         yield [
             'error_magic_number',
@@ -183,7 +183,7 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'error_postscript_not_found',
-            'Aucun nom PostScript n\'a été trouvé.',
+            "Aucun nom PostScript n'a été trouvé.",
         ];
         yield [
             'error_table_format',
@@ -197,7 +197,7 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'error_unicode_not_found',
-            'Aucun encodage Unicode n\'a été trouvé.',
+            "Aucun encodage Unicode n'a été trouvé.",
         ];
         yield [
             'error_unknown',
@@ -223,7 +223,7 @@ final class TranslatorTest extends TestCase
         ];
         yield [
             'warning_character_missing',
-            'Le caractère \'value\' est manquant.',
+            "Le caractère 'value' est manquant.",
             self::STR_VALUE,
         ];
     }
