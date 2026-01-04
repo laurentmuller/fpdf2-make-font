@@ -13,10 +13,12 @@ declare(strict_types=1);
 
 use Rector\CodingStyle\Rector\ArrowFunction\StaticArrowFunctionRector;
 use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
+use Rector\CodingStyle\Rector\ClassLike\NewlineBetweenClassLikeStmtsRector;
 use Rector\CodingStyle\Rector\ClassMethod\NewlineBeforeNewAssignSetRector;
 use Rector\CodingStyle\Rector\Closure\StaticClosureRector;
 use Rector\CodingStyle\Rector\Stmt\NewlineAfterStatementRector;
 use Rector\Config\RectorConfig;
+use Rector\DeadCode\Rector\ClassMethod\RemoveParentDelegatingConstructorRector;
 use Rector\DeadCode\Rector\ConstFetch\RemovePhpVersionIdCheckRector;
 use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
 use Rector\PHPUnit\CodeQuality\Rector\Class_\PreferPHPUnitThisCallRector;
@@ -34,10 +36,15 @@ $skips = [
     PreferPHPUnitThisCallRector::class,
     __DIR__ . '/tests/Legacy',
     __DIR__ . '/tests/targets',
-    // CODING STYLE
+    // no space before or after statements
     NewlineAfterStatementRector::class,
     NewlineBeforeNewAssignSetRector::class,
+    // don't separate constants
+    NewlineBetweenClassLikeStmtsRector::class,
+    // don't rename exception
     CatchExceptionNameMatchingTypeRector::class,
+    // allow delegate constructor
+    RemoveParentDelegatingConstructorRector::class,
 ];
 
 $sets = [

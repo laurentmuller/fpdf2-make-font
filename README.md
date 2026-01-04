@@ -168,7 +168,6 @@ been created to generate fonts.
 [![PHP-CS-Fixer](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php-cs-fixer.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php-cs-fixer.yaml)
 [![PHPStan](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php_stan.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php_stan.yaml)
 [![PHPUnit](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php_unit.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/php_unit.yaml)
-[![Psalm](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/pslam.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/pslam.yaml)
 [![Rector](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/rector.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/rector.yaml)
 [![Lint](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/lint.yaml/badge.svg)](https://github.com/laurentmuller/fpdf2-make-font/actions/workflows/lint.yaml)
 [![StyleCI](https://github.styleci.io/repos/963306628/shield?branch=master)](https://github.styleci.io/repos/963306628?branch=master)
