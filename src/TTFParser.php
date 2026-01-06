@@ -156,9 +156,6 @@ class TTFParser extends FileReader
         }
     }
 
-    /**
-     * @psalm-suppress UnsupportedPropertyReferenceUsage
-     */
     private function addGlyph(int $id): void
     {
         $glyph = &$this->glyphs[$id];
@@ -467,8 +464,6 @@ class TTFParser extends FileReader
      * @phpstan-param self::TAG_* $tag
      *
      * @phpstan-return TableType
-     *
-     * @psalm-suppress UnsupportedPropertyReferenceUsage
      */
     private function loadTable(string $tag): array
     {
@@ -491,12 +486,12 @@ class TTFParser extends FileReader
     {
         $this->seekTag(self::TAG_CMAP);
         $this->skip(2); // version
-        $numTables = $this->readUShort();
+        $numTables = $this->readUShortBigEndian();
         $offset31 = 0;
         for ($i = 0; $i < $numTables; ++$i) {
-            $platformID = $this->readUShort();
-            $encodingID = $this->readUShort();
-            $offset = $this->readULong();
+            $platformID = $this->readUShortBigEndian();
+            $encodingID = $this->readUShortBigEndian();
+            $offset = $this->readULongBigEndian();
             if (3 === $platformID && 1 === $encodingID) {
                 $offset31 = $offset;
             }
@@ -511,26 +506,26 @@ class TTFParser extends FileReader
         $idRangeOffset = [];
         $this->chars = [];
         $this->seek($this->tables[self::TAG_CMAP]['offset'] + $offset31);
-        $format = $this->readUShort();
+        $format = $this->readUShortBigEndian();
         if (4 !== $format) {
             throw $this->translator->format('error_table_format', $format);
         }
         $this->skip(4); // length, language
-        $segCount = $this->readUShort() / 2;
+        $segCount = $this->readUShortBigEndian() / 2;
         $this->skip(6); // searchRange, entrySelector, rangeShift
         for ($i = 0; $i < $segCount; ++$i) {
-            $endCount[$i] = $this->readUShort();
+            $endCount[$i] = $this->readUShortBigEndian();
         }
         $this->skip(2); // reservedPad
         for ($i = 0; $i < $segCount; ++$i) {
-            $startCount[$i] = $this->readUShort();
+            $startCount[$i] = $this->readUShortBigEndian();
         }
         for ($i = 0; $i < $segCount; ++$i) {
             $idDelta[$i] = $this->readShort();
         }
         $offset = $this->tell();
         for ($i = 0; $i < $segCount; ++$i) {
-            $idRangeOffset[$i] = $this->readUShort();
+            $idRangeOffset[$i] = $this->readUShortBigEndian();
         }
 
         for ($i = 0; $i < $segCount; ++$i) {
@@ -546,7 +541,7 @@ class TTFParser extends FileReader
                     break;
                 }
                 if ($ro > 0) {
-                    $gid = $this->readUShort();
+                    $gid = $this->readUShortBigEndian();
                     if ($gid > 0) {
                         $gid += $d;
                     }
@@ -582,8 +577,8 @@ class TTFParser extends FileReader
             $offset = 10;
             $components = [];
             do {
-                $flags = $this->readUShort();
-                $index = $this->readUShort();
+                $flags = $this->readUShortBigEndian();
+                $index = $this->readUShortBigEndian();
                 $components[$offset + 2] = $index;
                 if ($this->isBitSet($flags, 1)) { // arg 1 and arg 2 are words
                     $skip = 4;
@@ -611,12 +606,12 @@ class TTFParser extends FileReader
     {
         $this->seekTag(self::TAG_HEAD);
         $this->skip(12); // version, fontRevision, checkSumAdjustment
-        $magicNumber = $this->readULong();
+        $magicNumber = $this->readULongBigEndian();
         if (0x5F0F3CF5 !== $magicNumber) {
             throw $this->translator->format('error_magic_number', $magicNumber);
         }
         $this->skip(2); // flags
-        $this->unitsPerEm = $this->readUShort();
+        $this->unitsPerEm = $this->readUShortBigEndian();
         $this->skip(16); // created, modified
         $this->xMin = $this->readShort();
         $this->yMin = $this->readShort();
@@ -633,7 +628,7 @@ class TTFParser extends FileReader
     {
         $this->seekTag(self::TAG_HHEA);
         $this->skip(34);
-        $this->numberOfHMetrics = $this->readUShort();
+        $this->numberOfHMetrics = $this->readUShortBigEndian();
     }
 
     /**
@@ -645,7 +640,7 @@ class TTFParser extends FileReader
         $this->glyphs = [];
         $width = 0;
         for ($i = 0; $i < $this->numberOfHMetrics; ++$i) {
-            $width = $this->readUShort();
+            $width = $this->readUShortBigEndian();
             $lsb = $this->readShort();
             $this->glyphs[$i] = [
                 'name' => '',
@@ -678,8 +673,8 @@ class TTFParser extends FileReader
 
         $offsets = [];
         $callback = 0 === $this->indexToLocFormat
-            ? fn(): int => 2 * $this->readUShort()  // short format
-            : fn(): int => $this->readULong(); // long format
+            ? fn(): int => 2 * $this->readUShortBigEndian()  // short format
+            : fn(): int => $this->readULongBigEndian(); // long format
         for ($i = 0; $i <= $this->numGlyphs; ++$i) {
             $offsets[] = $callback();
         }
@@ -702,7 +697,7 @@ class TTFParser extends FileReader
     {
         $this->seekTag(self::TAG_MAXP);
         $this->skip(4);
-        $this->numGlyphs = $this->readUShort();
+        $this->numGlyphs = $this->readUShortBigEndian();
     }
 
     /**
@@ -714,13 +709,13 @@ class TTFParser extends FileReader
         $tableOffset = $this->tables[self::TAG_NAME]['offset'];
         $this->postScriptName = '';
         $this->skip(2); // format
-        $count = $this->readUShort();
-        $stringOffset = $this->readUShort();
+        $count = $this->readUShortBigEndian();
+        $stringOffset = $this->readUShortBigEndian();
         for ($i = 0; $i < $count; ++$i) {
             $this->skip(6); // platformID, encodingID, languageID
-            $nameID = $this->readUShort();
-            $length = $this->readUShort();
-            $offset = $this->readUShort();
+            $nameID = $this->readUShortBigEndian();
+            $length = $this->readUShortBigEndian();
+            $offset = $this->readUShortBigEndian();
             if (6 === $nameID) {
                 // PostScript name
                 $this->seek($tableOffset + $stringOffset + $offset);
@@ -738,22 +733,22 @@ class TTFParser extends FileReader
 
     private function parseOffsetTable(): void
     {
-        $version = $this->readULong();
+        $version = $this->readULongBigEndian();
         if (0x4F54544F === $version) { // 'OTTO'
             throw $this->translator->instance('error_open_type_unsupported');
         }
         if (0x010000 !== $version) { // TrueType outlines
             throw $this->translator->format('error_file_version', $version);
         }
-        $numTables = $this->readUShort();
+        $numTables = $this->readUShortBigEndian();
         $this->skip(6); // searchRange, entrySelector, rangeShift
         $this->tables = [];
         for ($i = 0; $i < $numTables; ++$i) {
             /** @phpstan-var self::TAG_* $tag */
             $tag = $this->read(4);
             $checkSum = $this->read(4);
-            $offset = $this->readULong();
-            $length = $this->readULong();
+            $offset = $this->readULongBigEndian();
+            $length = $this->readULongBigEndian();
             $this->tables[$tag] = [
                 'offset' => $offset,
                 'data' => '',
@@ -769,12 +764,12 @@ class TTFParser extends FileReader
     private function parseOS2(): void
     {
         $this->seekTag(self::TAG_OS2);
-        $version = $this->readUShort();
+        $version = $this->readUShortBigEndian();
         $this->skip(6); // xAvgCharWidth, usWeightClass, usWidthClass
-        $fsType = $this->readUShort();
+        $fsType = $this->readUShortBigEndian();
         $this->embeddable = (2 !== $fsType) && ($fsType & 0x200) === 0;
         $this->skip(52);
-        $fsSelection = $this->readUShort();
+        $fsSelection = $this->readUShortBigEndian();
         $this->bold = ($fsSelection & 32) !== 0;
         $this->skip(4); // usFirstCharIndex, usLastCharIndex
         $this->typoAscender = $this->readShort();
@@ -793,12 +788,12 @@ class TTFParser extends FileReader
     private function parsePost(): void
     {
         $this->seekTag(self::TAG_POST);
-        $version = $this->readULong();
+        $version = $this->readULongBigEndian();
         $this->italicAngle = $this->readShort();
         $this->skip(2); // skip decimal part
         $this->underlinePosition = $this->readShort();
         $this->underlineThickness = $this->readShort();
-        $this->isFixedPitch = (0 !== $this->readULong());
+        $this->isFixedPitch = (0 !== $this->readULongBigEndian());
         $this->glyphNames = false;
         if (0x20000 !== $version) {
             return;
@@ -812,7 +807,7 @@ class TTFParser extends FileReader
         $namesCount = 0;
         $glyphNameIndex = [];
         for ($i = 0; $i < $this->numGlyphs; ++$i) {
-            $index = $this->readUShort();
+            $index = $this->readUShortBigEndian();
             $glyphNameIndex[] = $index;
             if ($index >= 258 && $index - 257 > $namesCount) {
                 $namesCount = $index - 257;

@@ -43,13 +43,4 @@ class FileHandle
             \fclose($this->handle);
         }
     }
-
-    /**
-     * @return resource
-     */
-    protected function getHandle(): mixed
-    {
-        /** @psalm-var resource */
-        return $this->handle;
-    }
 }

@@ -7,6 +7,8 @@
 * Author:  Olivier PLATHEY                                                     *
 *******************************************************************************/
 
+namespace fpdf\Tests\Legacy;
+
 class TTFParser
 {
 	protected $f;
@@ -78,7 +80,7 @@ class TTFParser
 			$length = $this->ReadULong();
 			$this->tables[$tag] = array('offset'=>$offset, 'length'=>$length, 'checkSum'=>$checkSum);
 		}
-	}	
+	}
 
 	function ParseHead()
 	{

@@ -22,6 +22,6 @@ class FileWriter extends FileHandle
 
     public function write(string $data): void
     {
-        \fwrite($this->getHandle(), $data);
+        \fwrite($this->handle, $data);
     }
 }

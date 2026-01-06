@@ -8,7 +8,7 @@ jobs:
 
         steps:
             -   name: Checkout code
-                uses: actions/checkout@v5
+                uses: actions/checkout@v6
 
             -   name: Install PHP with extensions
                 uses: shivammathur/setup-php@v2
@@ -20,7 +20,7 @@ jobs:
                 run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
             -   name: Lint Markdown
-                uses: DavidAnson/markdownlint-cli2-action@v15
+                uses: DavidAnson/markdownlint-cli2-action@v21
 
             -   name: Validate Composer
                 run: composer validate --strict

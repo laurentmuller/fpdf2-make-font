@@ -31,7 +31,7 @@ $paths = [
     __DIR__ . '/rector.php',
 ];
 
-$skips = [
+$skip = [
     RemovePhpVersionIdCheckRector::class,
     PreferPHPUnitThisCallRector::class,
     __DIR__ . '/tests/Legacy',
@@ -73,7 +73,7 @@ return RectorConfig::configure()
     ->withCache(__DIR__ . '/cache/rector')
     ->withRootFiles()
     ->withPaths($paths)
-    ->withSkip($skips)
+    ->withSkip($skip)
     ->withSets($sets)
     ->withRules($rules)
     ->withComposerBased(

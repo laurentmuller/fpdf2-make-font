@@ -517,15 +517,11 @@ class FontMaker
         return $cw;
     }
 
-    /**
-     * @psalm-return positive-int
-     */
     private function readSegment(FileReader $handler): int
     {
-        $marker = $handler->unpackInt('C', 1);
+        $marker = $handler->readUChar();
         $handler->skip(1); // type
-        /** @phpstan-var positive-int $size */
-        $size = $handler->unpackInt('V', 4);
+        $size = $handler->readULongLittleEndian();
         if (128 !== $marker) {
             throw $this->translator->instance('error_invalid_type');
         }

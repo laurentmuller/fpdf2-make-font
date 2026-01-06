@@ -15,42 +15,58 @@ namespace fpdf;
 
 class FileReader extends FileHandle
 {
-    public function __construct(
-        string $file,
-        string $mode = '',
-        Translator $translator = new Translator()
-    ) {
+    public function __construct(string $file, string $mode = '', Translator $translator = new Translator())
+    {
         parent::__construct($file, 'r' . $mode, $translator);
     }
 
     public function read(int $length): string
     {
-        return $length > 0 ? (string) \fread($this->getHandle(), $length) : '';
+        return $length > 0 ? (string) \fread($this->handle, $length) : '';
     }
 
     public function readShort(): int
     {
-        $value = $this->readUShort();
-        if ($value >= 0x008000) {
-            $value -= 0x010000;
-        }
+        $value = $this->readUShortBigEndian();
 
-        return $value;
+        return $value >= 0x008000 ? $value - 0x010000 : $value;
     }
 
-    public function readULong(): int
+    /**
+     * Unsigned char.
+     */
+    public function readUChar(): int
+    {
+        return $this->unpackInt('C', 1);
+    }
+
+    /**
+     * Unsigned long (always 32 bit, big endian byte order).
+     */
+    public function readULongBigEndian(): int
     {
         return $this->unpackInt('N', 4);
     }
 
-    public function readUShort(): int
+    /**
+     * Unsigned long (always 32 bit, little endian byte order).
+     */
+    public function readULongLittleEndian(): int
+    {
+        return $this->unpackInt('V', 4);
+    }
+
+    /**
+     * Unsigned short (always 16 bit, big endian byte order).
+     */
+    public function readUShortBigEndian(): int
     {
         return $this->unpackInt('n', 2);
     }
 
     public function seek(int $offset, int $whence = \SEEK_SET): void
     {
-        \fseek($this->getHandle(), $offset, $whence);
+        \fseek($this->handle, $offset, $whence);
     }
 
     public function skip(int $offset): void
@@ -60,12 +76,12 @@ class FileReader extends FileHandle
 
     public function tell(): int
     {
-        return (int) \ftell($this->getHandle());
+        return (int) \ftell($this->handle);
     }
 
     public function unpackInt(string $format, int $length): int
     {
-        /** @phpstan-var array<int> $values */
+        /** @var int[] $values */
         $values = (array) \unpack($format, $this->read($length));
 
         return $values[1];

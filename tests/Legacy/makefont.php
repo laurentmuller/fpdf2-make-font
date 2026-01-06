@@ -7,7 +7,7 @@
 * Author:  Olivier PLATHEY                                                     *
 *******************************************************************************/
 
-require('ttfparser.php');
+use fpdf\Tests\Legacy\TTFParser;
 
 function Message($txt, $severity='')
 {
