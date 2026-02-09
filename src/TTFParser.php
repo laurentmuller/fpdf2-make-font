@@ -39,21 +39,21 @@ namespace fpdf;
  */
 class TTFParser extends FileReader
 {
-    private const TAG_CMAP = 'cmap';
-    private const TAG_CVT = 'cvt';
-    private const TAG_FPGM = 'fpgm';
-    private const TAG_GLYF = 'glyf';
-    private const TAG_HEAD = 'head';
-    private const TAG_HHEA = 'hhea';
-    private const TAG_HMTX = 'hmtx';
-    private const TAG_LOCA = 'loca';
-    private const TAG_MAXP = 'maxp';
-    private const TAG_NAME = 'name';
-    private const TAG_OS2 = 'OS/2';
-    private const TAG_POST = 'post';
-    private const TAG_PREP = 'prep';
+    private const string TAG_CMAP = 'cmap';
+    private const string TAG_CVT = 'cvt';
+    private const string TAG_FPGM = 'fpgm';
+    private const string TAG_GLYF = 'glyf';
+    private const string TAG_HEAD = 'head';
+    private const string TAG_HHEA = 'hhea';
+    private const string TAG_HMTX = 'hmtx';
+    private const string TAG_LOCA = 'loca';
+    private const string TAG_MAXP = 'maxp';
+    private const string TAG_NAME = 'name';
+    private const string TAG_OS2 = 'OS/2';
+    private const string TAG_POST = 'post';
+    private const string TAG_PREP = 'prep';
 
-    private const TAGS_NAME = [
+    private const array TAGS_NAME = [
         self::TAG_CMAP,
         self::TAG_CVT,
         self::TAG_FPGM,

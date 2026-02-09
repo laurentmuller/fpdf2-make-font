@@ -19,8 +19,8 @@ use PHPUnit\Framework\TestCase;
 
 final class TranslatorTest extends TestCase
 {
-    private const INT_VALUE = 0x010203;
-    private const STR_VALUE = 'value';
+    private const int INT_VALUE = 0x010203;
+    private const string STR_VALUE = 'value';
 
     /**
      * @return \Generator<int, array{0: string, 1: bool}>

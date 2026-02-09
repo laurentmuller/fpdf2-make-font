@@ -42,11 +42,11 @@ class FontMaker
     /**
      * The default encoding ('cp1252').
      */
-    public const DEFAULT_ENCODING = 'cp1252';
+    public const string DEFAULT_ENCODING = 'cp1252';
 
-    private const FONT_TRUE_TYPE = 'TrueType';
-    private const FONT_TYPE_1 = 'Type1';
-    private const NOT_DEF = '.notdef';
+    private const string FONT_TRUE_TYPE = 'TrueType';
+    private const string FONT_TYPE_1 = 'Type1';
+    private const string NOT_DEF = '.notdef';
 
     /** @var Log[] */
     private array $logs = [];

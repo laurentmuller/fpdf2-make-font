@@ -13,15 +13,15 @@ declare(strict_types=1);
 
 namespace fpdf;
 
-if (\PHP_VERSION_ID < 80200) {
-    echo 'Error: makeFont requires PHP 8.2 or newer.';
+if (\PHP_VERSION_ID < 80300) {
+    echo 'Error: makeFont requires PHP 8.3 or newer.';
 
     return;
 }
 
 if (1 === $argc) {
     $help = <<<HELP
-            makeFont v1.0.0
+            makeFont v2.0.0
             ---------------
             Usage:
                 php makeFont fontFile [encoding [embed [subset]]]

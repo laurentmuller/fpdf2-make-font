@@ -6,6 +6,13 @@ to create font definitions.
 All code is copied from the [FPDF](https://www.fpdf.org/) created by Olivier
 PLATHEY.
 
+## Requirements
+
+| Branch | PHP Version |
+|--------|-------------|
+| master | 8.3         |
+| 1.x    | 8.2         |
+
 **Function:**
 
 ```php

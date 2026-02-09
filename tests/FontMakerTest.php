@@ -21,7 +21,7 @@ use PHPUnit\Framework\TestCase;
 
 final class FontMakerTest extends TestCase
 {
-    private const IGNORED_KEY = ['file', 'originalsize'];
+    private const array IGNORED_KEY = ['file', 'originalsize'];
 
     private string $fontPath;
     private string $targetPath;
