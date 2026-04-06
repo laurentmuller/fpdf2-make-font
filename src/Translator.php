@@ -15,21 +15,15 @@ namespace fpdf;
 
 class Translator
 {
-    /**
-     * The allowed locales.
-     */
-    public const ALLOWED_LOCALES = ['en', 'fr'];
+    /** The allowed locales. */
+    public const array ALLOWED_LOCALES = ['en', 'fr'];
 
-    /**
-     * The default locale.
-     */
-    public const DEFAULT_LOCALE = 'en';
+    /** The default locale. */
+    public const string DEFAULT_LOCALE = 'en';
 
     private string $locale = self::DEFAULT_LOCALE;
 
-    /**
-     * @var array<string, string>
-     */
+    /** @var array<string, string> */
     private array $messages;
 
     public function __construct(string $locale = self::DEFAULT_LOCALE)

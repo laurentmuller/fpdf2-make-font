@@ -67,8 +67,8 @@ try {
 
     // add the src and vendor files
     $phar->startBuffering();
-    addFiles($phar, $baseDirectory, '/src');
-    addFiles($phar, $baseDirectory, '/vendor');
+    \addFiles($phar, $baseDirectory, '/src');
+    \addFiles($phar, $baseDirectory, '/vendor');
     $phar->stopBuffering();
 
     // compress

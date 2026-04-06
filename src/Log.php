@@ -22,7 +22,8 @@ readonly class Log implements \Stringable
     public function __construct(
         public string $message,
         public LogLevel $level = LogLevel::INFO,
-    ) {}
+    ) {
+    }
 
     #[\Override]
     public function __toString(): string

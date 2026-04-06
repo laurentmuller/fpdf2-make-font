@@ -314,7 +314,7 @@ final class FontMakerTest extends TestCase
         bool $subset = true
     ): void {
         $fontFile = $this->fontPath . $name . '.' . $ext;
-        MakeFont($fontFile, $encoding, $embed, $subset); // @phpstan-ignore-line function.notFound
+        \MakeFont($fontFile, $encoding, $embed, $subset); // @phpstan-ignore-line function.notFound
     }
 
     /**

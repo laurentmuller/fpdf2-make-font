@@ -15,9 +15,7 @@ namespace fpdf;
 
 class FileHandle
 {
-    /**
-     * @phpstan-var resource|closed-resource
-     */
+    /** @phpstan-var resource|closed-resource */
     protected mixed $handle;
 
     public function __construct(
