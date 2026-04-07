@@ -47,36 +47,35 @@ class TTFParser extends FileReader
         self::TAG_PREP,
     ];
 
-    public bool $bold = false;
-    public int $capHeight = 0;
+    private bool $bold = false;
+    private int $capHeight = 0;
     /** @var array<int, int> */
-    public array $chars = [];
-    public bool $embeddable = false;
-    /** @var array<int, TTFGlyph> */
-    public array $glyphs = [];
-    public bool $isFixedPitch = false;
-    public int $italicAngle = 0;
-    public string $postScriptName = '';
-    public int $typoAscender = 0;
-    public int $typoDescender = 0;
-    public int $underlinePosition = 0;
-    public int $underlineThickness = 0;
-    public float $unitsPerEm = 1000.0;
-    public int $xMax = 0;
-    public int $xMin = 0;
-    public int $yMax = 0;
-    public int $yMin = 0;
-
+    private array $chars = [];
+    private bool $embeddable = false;
+    private bool $fixedPitch = false;
     private bool $glyphNames = false;
+    /** @var array<int, TTFGlyph> */
+    private array $glyphs = [];
     private int $indexToLocFormat = 0;
+    private int $italicAngle = 0;
     private int $numberOfHMetrics = 0;
     private int $numGlyphs = 0;
+    private string $postScriptName = '';
     /** @var array<int, int> */
     private array $subsettedChars = [];
     /** @var array<int, int> */
     private array $subsettedGlyphs = [];
     /** @var array<self::TAG_*, TTFTable> */
     private array $tables = [];
+    private int $typoAscender = 0;
+    private int $typoDescender = 0;
+    private int $underlinePosition = 0;
+    private int $underlineThickness = 0;
+    private float $unitsPerEm = 1000.0;
+    private int $xMax = 0;
+    private int $xMin = 0;
+    private int $yMax = 0;
+    private int $yMin = 0;
 
     /**
      * Build the font definition.
@@ -124,6 +123,11 @@ class TTFParser extends FileReader
         return $this->scale($this->capHeight);
     }
 
+    public function getChar(int $uv): int
+    {
+        return $this->chars[$uv];
+    }
+
     /**
      * Gets the scaled descender.
      */
@@ -140,12 +144,22 @@ class TTFParser extends FileReader
         return $this->scale($this->glyphs[$id]->width);
     }
 
+    public function getItalicAngle(): int
+    {
+        return $this->italicAngle;
+    }
+
     /**
      * Gets the scaled missing width.
      */
     public function getMissingWidth(): int
     {
         return $this->getGlyphWidth(0);
+    }
+
+    public function getPostScriptName(): string
+    {
+        return $this->postScriptName;
     }
 
     /**
@@ -164,9 +178,24 @@ class TTFParser extends FileReader
         return $this->scale($this->underlineThickness);
     }
 
+    public function isBold(): bool
+    {
+        return $this->bold;
+    }
+
     public function isCharSet(int $uv): bool
     {
         return isset($this->chars[$uv]);
+    }
+
+    public function isEmbeddable(): bool
+    {
+        return $this->embeddable;
+    }
+
+    public function isFixedPitch(): bool
+    {
+        return $this->fixedPitch;
     }
 
     /**
@@ -185,14 +214,6 @@ class TTFParser extends FileReader
         $this->parseName();
         $this->parseOS2();
         $this->parsePost();
-    }
-
-    /**
-     * Scale a value from the font units to the user units.
-     */
-    public function scale(float $value): int
-    {
-        return (int) \round($value * 1000.0 / $this->unitsPerEm);
     }
 
     /**
@@ -470,12 +491,7 @@ class TTFParser extends FileReader
     private function getCheckSumAdjustment(string $offsetTable, array $tables): string
     {
         $cs = $this->checkSum($offsetTable);
-        $cs .= \array_reduce(
-            $tables,
-            static fn (string $carry, TTFTable $table): string => $carry . $table->checksum,
-            ''
-        );
-
+        $cs .= \implode('', \array_column($tables, 'checksum'));
         /** @var int[] $values */
         $values = \unpack('n2', $this->checkSum($cs));
         $high = 0xB1B0 + ($values[1] ^ 0xFFFF);
@@ -835,7 +851,7 @@ class TTFParser extends FileReader
         $this->skip(2); // skip decimal part
         $this->underlinePosition = $this->readShort();
         $this->underlineThickness = $this->readShort();
-        $this->isFixedPitch = (0 !== $this->readULongBigEndian());
+        $this->fixedPitch = (0 !== $this->readULongBigEndian());
         $this->glyphNames = false;
         if (0x20000 !== $version) {
             return;
@@ -862,6 +878,14 @@ class TTFParser extends FileReader
         foreach ($glyphNameIndex as $i => $index) {
             $this->glyphs[$i]->name = $index >= 258 ? $names[$index - 258] : $index;
         }
+    }
+
+    /**
+     * Scale a value from the font units to the user units.
+     */
+    private function scale(float $value): int
+    {
+        return (int) \round($value * 1000.0 / $this->unitsPerEm);
     }
 
     /**

@@ -135,7 +135,7 @@ class FontMaker
 
         $font = new FontInfo();
         if ($embed) {
-            if (!$parser->embeddable) {
+            if (!$parser->isEmbeddable()) {
                 throw $this->translator->instance('error_license');
             }
             if ($subset) {
@@ -152,10 +152,10 @@ class FontMaker
             }
             $font->originalSize = $font->getDataLength();
         }
-        $font->fontName = $parser->postScriptName;
-        $font->bold = $parser->bold;
-        $font->italicAngle = $parser->italicAngle;
-        $font->fixedPitch = $parser->isFixedPitch;
+        $font->fontName = $parser->getPostScriptName();
+        $font->bold = $parser->isBold();
+        $font->italicAngle = $parser->getItalicAngle();
+        $font->fixedPitch = $parser->isFixedPitch();
         $font->ascender = $parser->getAscender();
         $font->descender = $parser->getDescender();
         $font->underlineThickness = $parser->getUnderlineThickness();
@@ -170,7 +170,7 @@ class FontMaker
             }
             $uv = $value->uv;
             if ($parser->isCharSet($uv)) {
-                $id = $parser->chars[$uv];
+                $id = $parser->getChar($uv);
                 $widths[$index] = $parser->getGlyphWidth($id);
             } else {
                 $this->warning(\sprintf($this->trans('warning_character_missing'), $value->name));
@@ -194,7 +194,8 @@ class FontMaker
         }
 
         $afmFile = \substr($fontFile, 0, -3) . 'afm';
-        $cw = $this->parseAfmFile($afmFile, $font);
+        $afmFileParser = new AfmFileParser($this->translator);
+        $cw = $afmFileParser->parse($afmFile, $font);
 
         if (!isset($font->fontName)) {
             throw $this->translator->instance('error_font_name');
@@ -386,62 +387,6 @@ class FontMaker
     private function message(string $message, LogLevel $level = LogLevel::INFO): void
     {
         $this->logs[] = new Log($message, $level);
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private function parseAfmFile(string $afmFile, FontInfo $font): array
-    {
-        $cw = [];
-        $loader = new MapLoader($this->translator);
-        $lines = $loader->getFileLines($afmFile);
-        foreach ($lines as $line) {
-            $values = \explode(' ', \rtrim($line));
-            if (\count($values) < 2) {
-                continue;
-            }
-            switch ($values[0]) {
-                case 'C':
-                    $cw[$values[7]] = (int) $values[4];
-                    break;
-                case 'Weight':
-                    $font->weight = $values[1];
-                    break;
-                case 'FontName':
-                    $font->fontName = $values[1];
-                    break;
-                case 'Ascender':
-                    $font->ascender = (int) $values[1];
-                    break;
-                case 'Descender':
-                    $font->descender = (int) $values[1];
-                    break;
-                case 'UnderlineThickness':
-                    $font->underlineThickness = (int) $values[1];
-                    break;
-                case 'UnderlinePosition':
-                    $font->underlinePosition = (int) $values[1];
-                    break;
-                case 'CapHeight':
-                    $font->capHeight = (int) $values[1];
-                    break;
-                case 'StdVW':
-                    $font->stdVW = (int) $values[1];
-                    break;
-                case 'ItalicAngle':
-                    $font->italicAngle = (int) $values[1];
-                    break;
-                case 'IsFixedPitch':
-                    $font->fixedPitch = \filter_var($values[1], \FILTER_VALIDATE_BOOLEAN);
-                    break;
-                case 'FontBBox':
-                    $font->fontBBox = [(int) $values[1], (int) $values[2], (int) $values[3], (int) $values[4]];
-                    break;
-            }
-        }
-
-        return $cw;
     }
 
     private function saveToFile(string $file, string $data, string $mode = ''): void

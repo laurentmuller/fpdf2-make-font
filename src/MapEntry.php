@@ -23,6 +23,11 @@ readonly class MapEntry
     ) {
     }
 
+    public static function instance(): self
+    {
+        return new self();
+    }
+
     public function isName(): bool
     {
         return self::NOT_DEF !== $this->name;

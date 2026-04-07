@@ -20,30 +20,15 @@ readonly class MapLoader
     }
 
     /**
-     * @return string[]
-     */
-    public function getFileLines(string $fileName): array
-    {
-        if (!\file_exists($fileName)) {
-            throw $this->translator->format('error_file_not_found', $fileName);
-        }
-        $lines = \file($fileName, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES);
-        if (false === $lines || [] === $lines) {
-            throw $this->translator->format('error_file_empty', $fileName);
-        }
-
-        return $lines;
-    }
-
-    /**
      * @return array<int, MapEntry>
      */
     public function getFileMap(string $encoding): array
     {
         $fileName = \sprintf('%s/map/%s.map', __DIR__, \strtolower($encoding));
-        $lines = $this->getFileLines($fileName);
+        $parser = new FileLinesParser($this->translator);
+        $lines = $parser->getLines($fileName);
 
-        $map = \array_fill(0, 256, new MapEntry());
+        $map = \array_fill(0, 256, MapEntry::instance());
         foreach ($lines as $line) {
             $values = \explode(' ', $line);
             $key = (int) \hexdec(\substr($values[0], 1));
