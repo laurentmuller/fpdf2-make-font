@@ -197,7 +197,7 @@ class FontMaker
         $afmFileParser = new AfmFileParser($this->translator);
         $cw = $afmFileParser->parse($afmFile, $font);
 
-        if (!isset($font->fontName)) {
+        if (null === $font->fontName || '' === $font->fontName) {
             throw $this->translator->instance('error_font_name');
         }
         if (!$font->isAscender()) {
