@@ -11,16 +11,13 @@
 
 declare(strict_types=1);
 
-use Rector\CodingStyle\Rector\ArrowFunction\StaticArrowFunctionRector;
 use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
 use Rector\CodingStyle\Rector\ClassLike\NewlineBetweenClassLikeStmtsRector;
 use Rector\CodingStyle\Rector\ClassMethod\NewlineBeforeNewAssignSetRector;
-use Rector\CodingStyle\Rector\Closure\StaticClosureRector;
 use Rector\CodingStyle\Rector\Stmt\NewlineAfterStatementRector;
 use Rector\Config\RectorConfig;
 use Rector\DeadCode\Rector\ClassMethod\RemoveParentDelegatingConstructorRector;
 use Rector\DeadCode\Rector\ConstFetch\RemovePhpVersionIdCheckRector;
-use Rector\Php83\Rector\ClassMethod\AddOverrideAttributeToOverriddenMethodsRector;
 use Rector\PHPUnit\CodeQuality\Rector\Class_\PreferPHPUnitThisCallRector;
 use Rector\PHPUnit\Set\PHPUnitSetList;
 use Rector\Set\ValueObject\SetList;
@@ -56,17 +53,12 @@ $sets = [
     SetList::INSTANCEOF,
     SetList::PRIVATIZATION,
     SetList::TYPE_DECLARATION,
+    SetList::IF,
     // PHP-Unit
     PHPUnitSetList::PHPUNIT_120,
     PHPUnitSetList::PHPUNIT_CODE_QUALITY,
-];
-
-$rules = [
-    // static closure and arrow functions
-    StaticClosureRector::class,
-    StaticArrowFunctionRector::class,
-    // must be removed when using SetList::PHP_83
-    AddOverrideAttributeToOverriddenMethodsRector::class,
+    PHPUnitSetList::PHPUNIT_MOCK_TO_STUB,
+    PHPUnitSetList::PHPUNIT_NARROW_ASSERTS,
 ];
 
 return RectorConfig::configure()
@@ -75,7 +67,6 @@ return RectorConfig::configure()
     ->withPaths($paths)
     ->withSkip($skip)
     ->withSets($sets)
-    ->withRules($rules)
     ->withComposerBased(
         phpunit: true
     )->withAttributesSets(
