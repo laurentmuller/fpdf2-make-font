@@ -55,7 +55,6 @@ $sets = [
     SetList::TYPE_DECLARATION,
     SetList::IF,
     // PHP-Unit
-    PHPUnitSetList::PHPUNIT_120,
     PHPUnitSetList::PHPUNIT_CODE_QUALITY,
     PHPUnitSetList::PHPUNIT_MOCK_TO_STUB,
     PHPUnitSetList::PHPUNIT_NARROW_ASSERTS,
@@ -64,6 +63,7 @@ $sets = [
 return RectorConfig::configure()
     ->withCache(__DIR__ . '/cache/rector')
     ->withRootFiles()
+    ->reportUnusedSkips()
     ->withPaths($paths)
     ->withSkip($skip)
     ->withSets($sets)

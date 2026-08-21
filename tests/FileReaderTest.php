@@ -23,6 +23,6 @@ final class FileReaderTest extends TestCase
     {
         $this->expectException(MakeFontException::class);
         self::expectExceptionMessage('Unable to open file: fake.txt.');
-        new FileReader('fake.txt');
+        @new FileReader('fake.txt');
     }
 }
