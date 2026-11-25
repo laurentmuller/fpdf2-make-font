@@ -331,7 +331,7 @@ final class FontMakerTest extends TestCase
         $source = \get_defined_vars();
         $source['cw'] = \array_values($source['cw']);
         $fontBBox = \substr($source['desc']['FontBBox'], 1, -1);
-        $source['desc']['FontBBox'] = \array_map('intval', \explode(' ', $fontBBox));
+        $source['desc']['FontBBox'] = \array_map(intval(...), \explode(' ', $fontBBox));
         \ksort($source);
         \ksort($source['desc']);
 

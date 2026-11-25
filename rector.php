@@ -14,9 +14,7 @@ declare(strict_types=1);
 use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
 use Rector\CodingStyle\Rector\ClassLike\NewlineBetweenClassLikeStmtsRector;
 use Rector\CodingStyle\Rector\ClassMethod\NewlineBeforeNewAssignSetRector;
-use Rector\CodingStyle\Rector\Stmt\NewlineAfterStatementRector;
 use Rector\Config\RectorConfig;
-use Rector\DeadCode\Rector\ClassMethod\RemoveParentDelegatingConstructorRector;
 use Rector\DeadCode\Rector\ConstFetch\RemovePhpVersionIdCheckRector;
 use Rector\PHPUnit\CodeQuality\Rector\Class_\PreferPHPUnitThisCallRector;
 use Rector\PHPUnit\Set\PHPUnitSetList;
@@ -34,26 +32,20 @@ $skip = [
     __DIR__ . '/tests/Legacy',
     __DIR__ . '/tests/targets',
     // no space before or after statements
-    NewlineAfterStatementRector::class,
     NewlineBeforeNewAssignSetRector::class,
     // don't separate constants
     NewlineBetweenClassLikeStmtsRector::class,
     // don't rename exception
     CatchExceptionNameMatchingTypeRector::class,
-    // allow delegate constructor
-    RemoveParentDelegatingConstructorRector::class,
 ];
 
 $sets = [
     // global
-    SetList::PHP_83,
     SetList::CODE_QUALITY,
     SetList::CODING_STYLE,
     SetList::DEAD_CODE,
-    SetList::INSTANCEOF,
     SetList::PRIVATIZATION,
     SetList::TYPE_DECLARATION,
-    SetList::IF,
     // PHP-Unit
     PHPUnitSetList::PHPUNIT_CODE_QUALITY,
     PHPUnitSetList::PHPUNIT_MOCK_TO_STUB,
@@ -64,6 +56,7 @@ return RectorConfig::configure()
     ->withCache(__DIR__ . '/cache/rector')
     ->withRootFiles()
     ->reportUnusedSkips()
+    ->withPhpSets(php83: true)
     ->withPaths($paths)
     ->withSkip($skip)
     ->withSets($sets)

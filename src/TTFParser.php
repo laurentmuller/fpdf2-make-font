@@ -737,7 +737,7 @@ class TTFParser extends FileReader
         $offsets = [];
         $callback = 0 === $this->indexToLocFormat
             ? fn (): int => 2 * $this->readUShortBigEndian()  // short format
-            : fn (): int => $this->readULongBigEndian(); // long format
+            : $this->readULongBigEndian(...); // long format; // long format
         for ($i = 0; $i <= $this->numGlyphs; ++$i) {
             $offsets[] = $callback();
         }
